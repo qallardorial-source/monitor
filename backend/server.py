@@ -446,6 +446,8 @@ async def create_lesson(data: LessonCreate, request: Request):
     lesson_doc["created_at"] = lesson_doc["created_at"].isoformat()
     await db.lessons.insert_one(lesson_doc)
     
+    # Return without _id
+    lesson_doc.pop("_id", None)
     return lesson_doc
 
 @api_router.get("/lessons/{lesson_id}")
