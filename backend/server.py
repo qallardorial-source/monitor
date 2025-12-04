@@ -545,6 +545,8 @@ async def create_booking(data: BookingCreate, request: Request):
         update_data["status"] = "full"
     await db.lessons.update_one({"id": data.lesson_id}, {"$set": update_data})
     
+    # Return without _id
+    booking_doc.pop("_id", None)
     return booking_doc
 
 @api_router.get("/bookings")
