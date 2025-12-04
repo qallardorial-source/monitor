@@ -331,6 +331,8 @@ async def create_instructor(data: InstructorCreate, request: Request):
     # Update user role
     await db.users.update_one({"id": user.id}, {"$set": {"role": "instructor"}})
     
+    # Return without _id
+    instructor_doc.pop("_id", None)
     return instructor_doc
 
 @api_router.get("/instructors/{instructor_id}")
