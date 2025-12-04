@@ -360,6 +360,23 @@ h1, h2, h3, h4, h5, h6 {
   gap: 24px;
 }
 
+.instructor-station {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.instructor-station-small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
 .instructor-avatar {
   width: 56px;
   height: 56px;
