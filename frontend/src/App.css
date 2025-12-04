@@ -514,6 +514,27 @@ h1, h2, h3, h4, h5, h6 {
   gap: 12px;
 }
 
+.booking-actions button {
+  background: var(--primary);
+  color: white;
+}
+
+.booking-actions button:hover {
+  background: var(--primary-dark);
+}
+
+.booking-actions button[variant="outline"],
+.booking-actions button.outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.booking-actions button[variant="outline"]:hover,
+.booking-actions button.outline:hover {
+  background: var(--secondary);
+}
+
 /* Become Instructor Card */
 .become-instructor-card {
   background: var(--secondary);
