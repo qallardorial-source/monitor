@@ -1100,6 +1100,19 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: 1fr;
   }
 
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recurring-options {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
   .booking-card > div {
     flex-direction: column;
     align-items: stretch;
