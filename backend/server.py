@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -23,12 +23,132 @@ db = client[os.environ['DB_NAME']]
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 stripe_api_key = os.environ.get('STRIPE_API_KEY', 'sk_test_emergent')
 
+# Platform settings
+PLATFORM_COMMISSION = 0.10  # 10% commission
+
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# ============== EMAIL SERVICE (SIMULATED) ==============
+
+class EmailService:
+    """Simulated email service - logs emails to console"""
+    
+    @staticmethod
+    async def send_booking_confirmation(user_email: str, user_name: str, lesson_title: str, lesson_date: str, lesson_time: str, instructor_name: str, price: float):
+        logger.info(f"""
+        ╔══════════════════════════════════════════════════════════════╗
+        ║                    EMAIL DE CONFIRMATION                      ║
+        ╠══════════════════════════════════════════════════════════════╣
+        ║ À: {user_email}
+        ║ Objet: Confirmation de réservation - {lesson_title}
+        ║
+        ║ Bonjour {user_name},
+        ║
+        ║ Votre réservation a bien été enregistrée !
+        ║
+        ║ Détails du cours:
+        ║ - Cours: {lesson_title}
+        ║ - Date: {lesson_date}
+        ║ - Horaire: {lesson_time}
+        ║ - Moniteur: {instructor_name}
+        ║ - Prix: {price}€
+        ║
+        ║ À bientôt sur les pistes !
+        ║ L'équipe SkiMonitor
+        ╚══════════════════════════════════════════════════════════════╝
+        """)
+    
+    @staticmethod
+    async def send_payment_confirmation(user_email: str, user_name: str, lesson_title: str, amount: float):
+        logger.info(f"""
+        ╔══════════════════════════════════════════════════════════════╗
+        ║                  EMAIL DE PAIEMENT CONFIRMÉ                   ║
+        ╠══════════════════════════════════════════════════════════════╣
+        ║ À: {user_email}
+        ║ Objet: Paiement confirmé - {lesson_title}
+        ║
+        ║ Bonjour {user_name},
+        ║
+        ║ Votre paiement de {amount}€ a été confirmé.
+        ║ Votre réservation est maintenant validée.
+        ║
+        ║ Rendez-vous sur les pistes !
+        ║ L'équipe SkiMonitor
+        ╚══════════════════════════════════════════════════════════════╝
+        """)
+    
+    @staticmethod
+    async def send_lesson_reminder(user_email: str, user_name: str, lesson_title: str, lesson_date: str, lesson_time: str, instructor_name: str, station: str):
+        logger.info(f"""
+        ╔══════════════════════════════════════════════════════════════╗
+        ║                    RAPPEL DE COURS (24H)                      ║
+        ╠══════════════════════════════════════════════════════════════╣
+        ║ À: {user_email}
+        ║ Objet: Rappel - Votre cours demain !
+        ║
+        ║ Bonjour {user_name},
+        ║
+        ║ N'oubliez pas votre cours demain !
+        ║
+        ║ - Cours: {lesson_title}
+        ║ - Date: {lesson_date}
+        ║ - Horaire: {lesson_time}
+        ║ - Moniteur: {instructor_name}
+        ║ - Station: {station}
+        ║
+        ║ Préparez vos affaires et à demain !
+        ║ L'équipe SkiMonitor
+        ╚══════════════════════════════════════════════════════════════╝
+        """)
+    
+    @staticmethod
+    async def send_instructor_notification(instructor_email: str, instructor_name: str, client_name: str, lesson_title: str, lesson_date: str):
+        logger.info(f"""
+        ╔══════════════════════════════════════════════════════════════╗
+        ║                 NOUVELLE RÉSERVATION MONITEUR                 ║
+        ╠══════════════════════════════════════════════════════════════╣
+        ║ À: {instructor_email}
+        ║ Objet: Nouvelle réservation pour {lesson_title}
+        ║
+        ║ Bonjour {instructor_name},
+        ║
+        ║ Vous avez une nouvelle réservation !
+        ║
+        ║ - Client: {client_name}
+        ║ - Cours: {lesson_title}
+        ║ - Date: {lesson_date}
+        ║
+        ║ Connectez-vous pour voir les détails.
+        ║ L'équipe SkiMonitor
+        ╚══════════════════════════════════════════════════════════════╝
+        """)
+
+email_service = EmailService()
+
+# ============== SKI STATIONS DATA ==============
+
+SKI_STATIONS = [
+    {"id": "chamonix", "name": "Chamonix Mont-Blanc", "region": "Haute-Savoie", "altitude": 1035},
+    {"id": "courchevel", "name": "Courchevel", "region": "Savoie", "altitude": 1850},
+    {"id": "meribel", "name": "Méribel", "region": "Savoie", "altitude": 1450},
+    {"id": "val-thorens", "name": "Val Thorens", "region": "Savoie", "altitude": 2300},
+    {"id": "tignes", "name": "Tignes", "region": "Savoie", "altitude": 2100},
+    {"id": "val-disere", "name": "Val d'Isère", "region": "Savoie", "altitude": 1850},
+    {"id": "les-arcs", "name": "Les Arcs", "region": "Savoie", "altitude": 1600},
+    {"id": "la-plagne", "name": "La Plagne", "region": "Savoie", "altitude": 1970},
+    {"id": "avoriaz", "name": "Avoriaz", "region": "Haute-Savoie", "altitude": 1800},
+    {"id": "morzine", "name": "Morzine", "region": "Haute-Savoie", "altitude": 1000},
+    {"id": "megeve", "name": "Megève", "region": "Haute-Savoie", "altitude": 1113},
+    {"id": "les-2-alpes", "name": "Les 2 Alpes", "region": "Isère", "altitude": 1650},
+    {"id": "alpe-dhuez", "name": "Alpe d'Huez", "region": "Isère", "altitude": 1860},
+    {"id": "serre-chevalier", "name": "Serre Chevalier", "region": "Hautes-Alpes", "altitude": 1200},
+    {"id": "la-clusaz", "name": "La Clusaz", "region": "Haute-Savoie", "altitude": 1100},
+]
 
 # ============== MODELS ==============
 
@@ -54,6 +174,7 @@ class Instructor(BaseModel):
     specialties: List[str] = []  # ski, snowboard, freestyle, etc.
     ski_levels: List[str] = []  # debutant, intermediaire, avance, expert
     hourly_rate: float = 50.0
+    station_id: str = ""  # Associated ski station
     status: str = "pending"  # pending, approved, rejected
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -70,6 +191,10 @@ class Lesson(BaseModel):
     current_participants: int = 0
     price: float
     status: str = "available"  # available, full, cancelled
+    is_recurring: bool = False
+    recurrence_type: Optional[str] = None  # weekly, biweekly
+    recurrence_end_date: Optional[str] = None
+    parent_lesson_id: Optional[str] = None  # For recurring lessons
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Booking(BaseModel):
@@ -88,6 +213,8 @@ class PaymentTransaction(BaseModel):
     user_id: Optional[str] = None
     booking_id: str
     amount: float
+    commission: float = 0.0  # Platform commission
+    instructor_amount: float = 0.0  # Amount for instructor
     currency: str = "eur"
     status: str = "initiated"  # initiated, paid, failed, expired
     payment_status: str = "pending"
@@ -104,6 +231,7 @@ class InstructorCreate(BaseModel):
     specialties: List[str] = []
     ski_levels: List[str] = []
     hourly_rate: float = 50.0
+    station_id: str = ""
 
 class InstructorStatusUpdate(BaseModel):
     status: str  # approved, rejected
@@ -117,6 +245,9 @@ class LessonCreate(BaseModel):
     end_time: str
     max_participants: int = 1
     price: float
+    is_recurring: bool = False
+    recurrence_type: Optional[str] = None  # weekly, biweekly
+    recurrence_end_date: Optional[str] = None
 
 class BookingCreate(BaseModel):
     lesson_id: str
@@ -146,7 +277,6 @@ async def get_session_from_request(request: Request) -> Optional[UserSession]:
     if isinstance(expires_at, str):
         expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
     elif isinstance(expires_at, datetime) and expires_at.tzinfo is None:
-        # Handle offset-naive datetime from MongoDB
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     
     if expires_at < datetime.now(timezone.utc):
@@ -190,8 +320,8 @@ async def require_instructor(request: Request) -> User:
 async def process_session(request: Request, response: Response, data: SessionRequest):
     """Process session_id from Google OAuth redirect"""
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
+        async with httpx.AsyncClient() as http_client:
+            resp = await http_client.get(
                 "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
                 headers={"X-Session-ID": data.session_id}
             )
@@ -289,19 +419,60 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(key="session_token", path="/")
     return {"message": "Déconnecté"}
 
+# ============== STATIONS ROUTES ==============
+
+@api_router.get("/stations")
+async def list_stations():
+    """List all ski stations"""
+    return SKI_STATIONS
+
+@api_router.get("/stations/{station_id}")
+async def get_station(station_id: str):
+    """Get station details"""
+    station = next((s for s in SKI_STATIONS if s["id"] == station_id), None)
+    if not station:
+        raise HTTPException(status_code=404, detail="Station non trouvée")
+    return station
+
 # ============== INSTRUCTOR ROUTES ==============
 
 @api_router.get("/instructors")
-async def list_instructors(status: Optional[str] = None):
-    """List all approved instructors (public) or filter by status"""
+async def list_instructors(
+    status: Optional[str] = None,
+    station_id: Optional[str] = None,
+    specialty: Optional[str] = None,
+    level: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None
+):
+    """List instructors with filters"""
     query = {"status": "approved"} if status is None else {"status": status}
+    
+    if station_id:
+        query["station_id"] = station_id
+    if specialty:
+        query["specialties"] = {"$in": [specialty]}
+    if level:
+        query["ski_levels"] = {"$in": [level]}
+    if min_price is not None:
+        query["hourly_rate"] = {"$gte": min_price}
+    if max_price is not None:
+        if "hourly_rate" in query:
+            query["hourly_rate"]["$lte"] = max_price
+        else:
+            query["hourly_rate"] = {"$lte": max_price}
+    
     instructors = await db.instructors.find(query, {"_id": 0}).to_list(100)
     
-    # Enrich with user data
+    # Enrich with user data and station
     for instructor in instructors:
         user = await db.users.find_one({"id": instructor["user_id"]}, {"_id": 0})
         if user:
             instructor["user"] = user
+        # Add station info
+        if instructor.get("station_id"):
+            station = next((s for s in SKI_STATIONS if s["id"] == instructor["station_id"]), None)
+            instructor["station"] = station
     
     return instructors
 
@@ -321,6 +492,7 @@ async def create_instructor(data: InstructorCreate, request: Request):
         specialties=data.specialties,
         ski_levels=data.ski_levels,
         hourly_rate=data.hourly_rate,
+        station_id=data.station_id,
         status="pending"
     )
     
@@ -345,6 +517,11 @@ async def get_instructor(instructor_id: str):
     user = await db.users.find_one({"id": instructor["user_id"]}, {"_id": 0})
     instructor["user"] = user
     
+    # Add station info
+    if instructor.get("station_id"):
+        station = next((s for s in SKI_STATIONS if s["id"] == instructor["station_id"]), None)
+        instructor["station"] = station
+    
     return instructor
 
 @api_router.put("/instructors/{instructor_id}")
@@ -365,7 +542,8 @@ async def update_instructor(instructor_id: str, data: InstructorCreate, request:
             "bio": data.bio,
             "specialties": data.specialties,
             "ski_levels": data.ski_levels,
-            "hourly_rate": data.hourly_rate
+            "hourly_rate": data.hourly_rate,
+            "station_id": data.station_id
         }}
     )
     
@@ -395,9 +573,13 @@ async def update_instructor_status(instructor_id: str, data: InstructorStatusUpd
 async def list_lessons(
     instructor_id: Optional[str] = None,
     date: Optional[str] = None,
-    lesson_type: Optional[str] = None
+    lesson_type: Optional[str] = None,
+    station_id: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    level: Optional[str] = None
 ):
-    """List available lessons"""
+    """List available lessons with filters"""
     query = {"status": "available"}
     if instructor_id:
         query["instructor_id"] = instructor_id
@@ -405,22 +587,41 @@ async def list_lessons(
         query["date"] = date
     if lesson_type:
         query["lesson_type"] = lesson_type
+    if min_price is not None:
+        query["price"] = {"$gte": min_price}
+    if max_price is not None:
+        if "price" in query:
+            query["price"]["$lte"] = max_price
+        else:
+            query["price"] = {"$lte": max_price}
     
     lessons = await db.lessons.find(query, {"_id": 0}).to_list(100)
     
-    # Enrich with instructor data
+    # Filter by station or level (need to check instructor)
+    filtered_lessons = []
     for lesson in lessons:
         instructor = await db.instructors.find_one({"id": lesson["instructor_id"]}, {"_id": 0})
         if instructor:
+            # Filter by station
+            if station_id and instructor.get("station_id") != station_id:
+                continue
+            # Filter by level
+            if level and level not in instructor.get("ski_levels", []):
+                continue
+            
             user = await db.users.find_one({"id": instructor["user_id"]}, {"_id": 0})
             instructor["user"] = user
+            if instructor.get("station_id"):
+                station = next((s for s in SKI_STATIONS if s["id"] == instructor["station_id"]), None)
+                instructor["station"] = station
             lesson["instructor"] = instructor
+            filtered_lessons.append(lesson)
     
-    return lessons
+    return filtered_lessons
 
 @api_router.post("/lessons")
 async def create_lesson(data: LessonCreate, request: Request):
-    """Instructor: Create a lesson"""
+    """Instructor: Create a lesson (with optional recurrence)"""
     user = await require_instructor(request)
     
     instructor = await db.instructors.find_one({"user_id": user.id})
@@ -430,6 +631,9 @@ async def create_lesson(data: LessonCreate, request: Request):
     if instructor["status"] != "approved":
         raise HTTPException(status_code=403, detail="Votre profil doit être approuvé")
     
+    created_lessons = []
+    
+    # Create main lesson
     lesson = Lesson(
         instructor_id=instructor["id"],
         lesson_type=data.lesson_type,
@@ -439,16 +643,52 @@ async def create_lesson(data: LessonCreate, request: Request):
         start_time=data.start_time,
         end_time=data.end_time,
         max_participants=data.max_participants if data.lesson_type == "group" else 1,
-        price=data.price
+        price=data.price,
+        is_recurring=data.is_recurring,
+        recurrence_type=data.recurrence_type,
+        recurrence_end_date=data.recurrence_end_date
     )
     
     lesson_doc = lesson.model_dump()
     lesson_doc["created_at"] = lesson_doc["created_at"].isoformat()
     await db.lessons.insert_one(lesson_doc)
-    
-    # Return without _id
     lesson_doc.pop("_id", None)
-    return lesson_doc
+    created_lessons.append(lesson_doc)
+    
+    # Create recurring lessons if enabled
+    if data.is_recurring and data.recurrence_type and data.recurrence_end_date:
+        parent_id = lesson.id
+        current_date = datetime.strptime(data.date, "%Y-%m-%d")
+        end_date = datetime.strptime(data.recurrence_end_date, "%Y-%m-%d")
+        
+        delta = timedelta(weeks=1) if data.recurrence_type == "weekly" else timedelta(weeks=2)
+        
+        current_date += delta
+        while current_date <= end_date:
+            recurring_lesson = Lesson(
+                instructor_id=instructor["id"],
+                lesson_type=data.lesson_type,
+                title=data.title,
+                description=data.description,
+                date=current_date.strftime("%Y-%m-%d"),
+                start_time=data.start_time,
+                end_time=data.end_time,
+                max_participants=data.max_participants if data.lesson_type == "group" else 1,
+                price=data.price,
+                is_recurring=True,
+                recurrence_type=data.recurrence_type,
+                parent_lesson_id=parent_id
+            )
+            
+            recurring_doc = recurring_lesson.model_dump()
+            recurring_doc["created_at"] = recurring_doc["created_at"].isoformat()
+            await db.lessons.insert_one(recurring_doc)
+            recurring_doc.pop("_id", None)
+            created_lessons.append(recurring_doc)
+            
+            current_date += delta
+    
+    return created_lessons[0] if len(created_lessons) == 1 else {"lessons_created": len(created_lessons), "first_lesson": created_lessons[0]}
 
 @api_router.get("/lessons/{lesson_id}")
 async def get_lesson(lesson_id: str):
@@ -461,6 +701,9 @@ async def get_lesson(lesson_id: str):
     if instructor:
         user = await db.users.find_one({"id": instructor["user_id"]}, {"_id": 0})
         instructor["user"] = user
+        if instructor.get("station_id"):
+            station = next((s for s in SKI_STATIONS if s["id"] == instructor["station_id"]), None)
+            instructor["station"] = station
         lesson["instructor"] = instructor
     
     return lesson
@@ -475,7 +718,7 @@ async def delete_lesson(lesson_id: str, request: Request):
     if not lesson:
         raise HTTPException(status_code=404, detail="Cours non trouvé")
     
-    if lesson["instructor_id"] != instructor["id"] and user.role != "admin":
+    if instructor and lesson["instructor_id"] != instructor["id"] and user.role != "admin":
         raise HTTPException(status_code=403, detail="Non autorisé")
     
     await db.lessons.update_one({"id": lesson_id}, {"$set": {"status": "cancelled"}})
@@ -545,6 +788,31 @@ async def create_booking(data: BookingCreate, request: Request):
         update_data["status"] = "full"
     await db.lessons.update_one({"id": data.lesson_id}, {"$set": update_data})
     
+    # Send email notifications
+    instructor = await db.instructors.find_one({"id": lesson["instructor_id"]})
+    instructor_user = await db.users.find_one({"id": instructor["user_id"]}) if instructor else None
+    
+    # Email to client
+    await email_service.send_booking_confirmation(
+        user_email=user.email,
+        user_name=user.name,
+        lesson_title=lesson["title"],
+        lesson_date=lesson["date"],
+        lesson_time=f"{lesson['start_time']} - {lesson['end_time']}",
+        instructor_name=instructor_user["name"] if instructor_user else "Moniteur",
+        price=lesson["price"] * data.participants
+    )
+    
+    # Email to instructor
+    if instructor_user:
+        await email_service.send_instructor_notification(
+            instructor_email=instructor_user["email"],
+            instructor_name=instructor_user["name"],
+            client_name=user.name,
+            lesson_title=lesson["title"],
+            lesson_date=lesson["date"]
+        )
+    
     # Return without _id
     booking_doc.pop("_id", None)
     return booking_doc
@@ -563,6 +831,9 @@ async def list_bookings(request: Request):
             if instructor:
                 user_data = await db.users.find_one({"id": instructor["user_id"]}, {"_id": 0})
                 instructor["user"] = user_data
+                if instructor.get("station_id"):
+                    station = next((s for s in SKI_STATIONS if s["id"] == instructor["station_id"]), None)
+                    instructor["station"] = station
                 lesson["instructor"] = instructor
             booking["lesson"] = lesson
     
@@ -597,7 +868,7 @@ async def cancel_booking(booking_id: str, request: Request):
 
 @api_router.post("/payments/checkout")
 async def create_checkout(data: PaymentRequest, request: Request):
-    """Create Stripe checkout session"""
+    """Create Stripe checkout session with commission"""
     user = await require_auth(request)
     
     booking = await db.bookings.find_one({"id": data.booking_id})
@@ -614,7 +885,9 @@ async def create_checkout(data: PaymentRequest, request: Request):
     if not lesson:
         raise HTTPException(status_code=404, detail="Cours non trouvé")
     
-    amount = float(lesson["price"]) * booking["participants"]
+    total_amount = float(lesson["price"]) * booking["participants"]
+    commission = round(total_amount * PLATFORM_COMMISSION, 2)
+    instructor_amount = round(total_amount - commission, 2)
     
     host_url = str(request.base_url).rstrip('/')
     webhook_url = f"{host_url}/api/webhook/stripe"
@@ -624,25 +897,29 @@ async def create_checkout(data: PaymentRequest, request: Request):
     cancel_url = f"{data.origin_url}/bookings"
     
     checkout_request = CheckoutSessionRequest(
-        amount=amount,
+        amount=total_amount,
         currency="eur",
         success_url=success_url,
         cancel_url=cancel_url,
         metadata={
             "booking_id": data.booking_id,
             "user_id": user.id,
-            "lesson_id": booking["lesson_id"]
+            "lesson_id": booking["lesson_id"],
+            "commission": str(commission),
+            "instructor_amount": str(instructor_amount)
         }
     )
     
     session = await stripe_checkout.create_checkout_session(checkout_request)
     
-    # Create payment transaction
+    # Create payment transaction with commission details
     transaction = PaymentTransaction(
         session_id=session.session_id,
         user_id=user.id,
         booking_id=data.booking_id,
-        amount=amount,
+        amount=total_amount,
+        commission=commission,
+        instructor_amount=instructor_amount,
         currency="eur",
         status="initiated",
         payment_status="pending",
@@ -659,7 +936,13 @@ async def create_checkout(data: PaymentRequest, request: Request):
         {"$set": {"payment_session_id": session.session_id}}
     )
     
-    return {"url": session.url, "session_id": session.session_id}
+    return {
+        "url": session.url,
+        "session_id": session.session_id,
+        "total_amount": total_amount,
+        "commission": commission,
+        "instructor_amount": instructor_amount
+    }
 
 @api_router.get("/payments/status/{session_id}")
 async def get_payment_status(session_id: str, request: Request):
@@ -682,6 +965,19 @@ async def get_payment_status(session_id: str, request: Request):
                 {"id": transaction["booking_id"]},
                 {"$set": {"status": "confirmed", "payment_status": "paid"}}
             )
+            
+            # Send payment confirmation email
+            booking = await db.bookings.find_one({"id": transaction["booking_id"]})
+            if booking:
+                user = await db.users.find_one({"id": booking["user_id"]})
+                lesson = await db.lessons.find_one({"id": booking["lesson_id"]})
+                if user and lesson:
+                    await email_service.send_payment_confirmation(
+                        user_email=user["email"],
+                        user_name=user["name"],
+                        lesson_title=lesson["title"],
+                        amount=transaction["amount"]
+                    )
     elif status.status == "expired":
         await db.payment_transactions.update_one(
             {"session_id": session_id},
@@ -738,12 +1034,15 @@ async def get_pending_instructors(request: Request):
     for instructor in instructors:
         user = await db.users.find_one({"id": instructor["user_id"]}, {"_id": 0})
         instructor["user"] = user
+        if instructor.get("station_id"):
+            station = next((s for s in SKI_STATIONS if s["id"] == instructor["station_id"]), None)
+            instructor["station"] = station
     
     return instructors
 
 @api_router.get("/admin/stats")
 async def get_admin_stats(request: Request):
-    """Admin: Get platform statistics"""
+    """Admin: Get platform statistics including commission"""
     await require_admin(request)
     
     total_users = await db.users.count_documents({})
@@ -752,19 +1051,84 @@ async def get_admin_stats(request: Request):
     total_lessons = await db.lessons.count_documents({"status": "available"})
     total_bookings = await db.bookings.count_documents({"status": {"$ne": "cancelled"}})
     
+    # Calculate revenue stats
+    paid_transactions = await db.payment_transactions.find({"status": "paid"}, {"_id": 0}).to_list(1000)
+    total_revenue = sum(t.get("amount", 0) for t in paid_transactions)
+    total_commission = sum(t.get("commission", 0) for t in paid_transactions)
+    
     return {
         "total_users": total_users,
         "total_instructors": total_instructors,
         "pending_instructors": pending_instructors,
         "total_lessons": total_lessons,
-        "total_bookings": total_bookings
+        "total_bookings": total_bookings,
+        "total_revenue": round(total_revenue, 2),
+        "total_commission": round(total_commission, 2),
+        "commission_rate": f"{int(PLATFORM_COMMISSION * 100)}%"
     }
+
+@api_router.get("/admin/transactions")
+async def get_transactions(request: Request):
+    """Admin: Get all payment transactions"""
+    await require_admin(request)
+    
+    transactions = await db.payment_transactions.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    for tx in transactions:
+        if tx.get("user_id"):
+            user = await db.users.find_one({"id": tx["user_id"]}, {"_id": 0})
+            tx["user"] = user
+        if tx.get("booking_id"):
+            booking = await db.bookings.find_one({"id": tx["booking_id"]}, {"_id": 0})
+            if booking:
+                lesson = await db.lessons.find_one({"id": booking["lesson_id"]}, {"_id": 0})
+                tx["lesson"] = lesson
+    
+    return transactions
+
+# ============== REMINDER SYSTEM ==============
+
+@api_router.post("/admin/send-reminders")
+async def send_lesson_reminders(request: Request):
+    """Admin: Manually trigger 24h lesson reminders"""
+    await require_admin(request)
+    
+    tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    # Find lessons for tomorrow
+    lessons = await db.lessons.find({"date": tomorrow, "status": {"$ne": "cancelled"}}, {"_id": 0}).to_list(100)
+    
+    reminders_sent = 0
+    for lesson in lessons:
+        # Get instructor info
+        instructor = await db.instructors.find_one({"id": lesson["instructor_id"]})
+        instructor_user = await db.users.find_one({"id": instructor["user_id"]}) if instructor else None
+        station = next((s for s in SKI_STATIONS if s["id"] == instructor.get("station_id", "")), None) if instructor else None
+        
+        # Get bookings for this lesson
+        bookings = await db.bookings.find({"lesson_id": lesson["id"], "status": {"$ne": "cancelled"}}).to_list(100)
+        
+        for booking in bookings:
+            user = await db.users.find_one({"id": booking["user_id"]})
+            if user:
+                await email_service.send_lesson_reminder(
+                    user_email=user["email"],
+                    user_name=user["name"],
+                    lesson_title=lesson["title"],
+                    lesson_date=lesson["date"],
+                    lesson_time=f"{lesson['start_time']} - {lesson['end_time']}",
+                    instructor_name=instructor_user["name"] if instructor_user else "Moniteur",
+                    station=station["name"] if station else "Non spécifiée"
+                )
+                reminders_sent += 1
+    
+    return {"message": f"{reminders_sent} rappel(s) envoyé(s)"}
 
 # ============== UTILITY ROUTES ==============
 
 @api_router.get("/")
 async def root():
-    return {"message": "SkiMonitor API"}
+    return {"message": "SkiMonitor API", "commission_rate": f"{int(PLATFORM_COMMISSION * 100)}%"}
 
 @api_router.get("/health")
 async def health():
