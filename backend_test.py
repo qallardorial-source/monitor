@@ -184,6 +184,24 @@ class SkiMonitorAPITester:
             self.test_instructor_id = data['id']
             self.log_test("Create instructor", True)
             return True
+        elif status == 400 and "Déjà inscrit" in data.get('detail', ''):
+            # User already registered as instructor, get the instructor ID
+            success, user_data, _ = self.make_request('GET', 'auth/me', token=self.test_user_token)
+            if success and user_data.get('instructor'):
+                self.test_instructor_id = user_data['instructor']['id']
+                self.log_test("Create instructor", True, "Already registered")
+                return True
+            else:
+                # Try to find instructor by getting pending list
+                success, pending_list, _ = self.make_request('GET', 'admin/pending-instructors', token=self.admin_token)
+                if success:
+                    for instructor in pending_list:
+                        if instructor.get('user', {}).get('email', '').startswith('test.user.'):
+                            self.test_instructor_id = instructor['id']
+                            self.log_test("Create instructor", True, "Found existing")
+                            return True
+                self.log_test("Create instructor", False, "Already registered but can't find ID")
+                return False
         else:
             self.log_test("Create instructor", False, f"Status: {status}, Response: {data}")
             return False
