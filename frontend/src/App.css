@@ -559,6 +559,15 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.95rem;
 }
 
+.become-instructor-content button {
+  background: var(--primary);
+  color: white;
+}
+
+.become-instructor-content button:hover {
+  background: var(--primary-dark);
+}
+
 /* Form */
 .form-card {
   max-width: 600px;
