@@ -135,6 +135,8 @@ class SkiMonitorAPITester:
               expires_at: new Date(Date.now() + 7*24*60*60*1000),
               created_at: new Date()
             }});
+            print('Created user: ' + userId);
+            print('Created session: ' + sessionToken);
             """
             
             result = subprocess.run(['mongosh', '--eval', mongo_script], 
@@ -142,6 +144,7 @@ class SkiMonitorAPITester:
             
             if result.returncode == 0:
                 self.test_user_token = session_token
+                print(f"  Created test session: {session_token}")
                 self.log_test("Create test user session", True)
                 return True
             else:
