@@ -145,6 +145,9 @@ async def get_session_from_request(request: Request) -> Optional[UserSession]:
     expires_at = session.get("expires_at")
     if isinstance(expires_at, str):
         expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+    elif isinstance(expires_at, datetime) and expires_at.tzinfo is None:
+        # Handle offset-naive datetime from MongoDB
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
     
     if expires_at < datetime.now(timezone.utc):
         await db.user_sessions.delete_one({"session_token": session_token})
