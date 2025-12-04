@@ -567,9 +567,9 @@ const LessonsList = ({ user }) => {
     const fetchLessons = async () => {
       try {
         const params = {};
-        if (filters.lesson_type) params.lesson_type = filters.lesson_type;
-        if (filters.station_id) params.station_id = filters.station_id;
-        if (filters.level) params.level = filters.level;
+        if (filters.lesson_type && filters.lesson_type !== "all") params.lesson_type = filters.lesson_type;
+        if (filters.station_id && filters.station_id !== "all") params.station_id = filters.station_id;
+        if (filters.level && filters.level !== "all") params.level = filters.level;
         if (filters.maxPrice < 200) params.max_price = filters.maxPrice;
         
         const response = await axios.get(`${API}/lessons`, { params });
