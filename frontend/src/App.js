@@ -1103,7 +1103,7 @@ const AdminDashboard = ({ user }) => {
         </Card>
         <Card className="stat-card">
           <CardContent>
-            <Ski size={24} />
+            <Award size={24} />
             <div className="stat-value">{stats?.total_instructors || 0}</div>
             <div className="stat-label">Moniteurs</div>
           </CardContent>
