@@ -630,7 +630,7 @@ const LessonsList = ({ user }) => {
                     <SelectValue placeholder="Tous les cours" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous les cours</SelectItem>
+                    <SelectItem value="all">Tous les cours</SelectItem>
                     <SelectItem value="private">Particuliers</SelectItem>
                     <SelectItem value="group">Collectifs</SelectItem>
                   </SelectContent>
@@ -643,7 +643,7 @@ const LessonsList = ({ user }) => {
                     <SelectValue placeholder="Toutes les stations" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes les stations</SelectItem>
+                    <SelectItem value="all">Toutes les stations</SelectItem>
                     {stations.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
@@ -657,7 +657,7 @@ const LessonsList = ({ user }) => {
                     <SelectValue placeholder="Tous niveaux" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous niveaux</SelectItem>
+                    <SelectItem value="all">Tous niveaux</SelectItem>
                     {levels.map((l) => (
                       <SelectItem key={l} value={l}>{l}</SelectItem>
                     ))}
