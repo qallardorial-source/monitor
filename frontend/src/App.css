@@ -631,6 +631,72 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--primary-dark);
 }
 
+/* Recurring Section */
+.recurring-section {
+  background: var(--secondary);
+  padding: 16px;
+  border-radius: var(--radius);
+  margin-top: 8px;
+}
+
+.recurring-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* Revenue Section */
+.revenue-section {
+  margin-bottom: 40px;
+}
+
+.revenue-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+}
+
+.revenue-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.revenue-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.revenue-card > div {
+  padding: 24px;
+}
+
+.revenue-card.commission {
+  background: var(--secondary);
+  border-color: var(--primary-light);
+}
+
+.revenue-label {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.revenue-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.revenue-card.commission .revenue-value {
+  color: var(--primary-dark);
+}
+
 /* Form */
 .form-card {
   max-width: 600px;
