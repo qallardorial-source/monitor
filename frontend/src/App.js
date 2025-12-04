@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,14 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mountain, Calendar as CalendarIcon, Clock, Users, Euro, MapPin, User, LogOut, Menu, ChevronRight, Snowflake, Star, Check, X, Award } from "lucide-react";
-import { format } from "date-fns";
+import { Slider } from "@/components/ui/slider";
+import { Mountain, Calendar as CalendarIcon, Clock, Users, Euro, MapPin, User, LogOut, ChevronRight, Snowflake, Star, Check, X, Award, Filter, Repeat, TrendingUp } from "lucide-react";
+import { format, addWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -52,6 +51,25 @@ const useAuth = () => {
   };
 
   return { user, setUser, loading, checkAuth, logout };
+};
+
+// Stations Hook
+const useStations = () => {
+  const [stations, setStations] = useState([]);
+
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const response = await axios.get(`${API}/stations`);
+        setStations(response.data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchStations();
+  }, []);
+
+  return stations;
 };
 
 // Header Component
@@ -231,15 +249,32 @@ const AuthCallback = ({ setUser, checkAuth }) => {
   return null;
 };
 
-// Instructors List
+// Instructors List with Filters
 const InstructorsList = () => {
   const [instructors, setInstructors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    station_id: "",
+    specialty: "",
+    level: "",
+    maxPrice: 200
+  });
+  const stations = useStations();
+
+  const specialties = ["Ski alpin", "Snowboard", "Freestyle", "Ski de fond", "Hors-piste"];
+  const levels = ["Débutant", "Intermédiaire", "Avancé", "Expert"];
 
   useEffect(() => {
     const fetchInstructors = async () => {
       try {
-        const response = await axios.get(`${API}/instructors`);
+        const params = {};
+        if (filters.station_id) params.station_id = filters.station_id;
+        if (filters.specialty) params.specialty = filters.specialty;
+        if (filters.level) params.level = filters.level;
+        if (filters.maxPrice < 200) params.max_price = filters.maxPrice;
+        
+        const response = await axios.get(`${API}/instructors`, { params });
         setInstructors(response.data);
       } catch (e) {
         toast.error("Erreur de chargement");
@@ -248,22 +283,95 @@ const InstructorsList = () => {
       }
     };
     fetchInstructors();
-  }, []);
+  }, [filters]);
+
+  const clearFilters = () => {
+    setFilters({ station_id: "", specialty: "", level: "", maxPrice: 200 });
+  };
 
   if (loading) return <div className="loading-page"><div className="loading-spinner"></div></div>;
 
   return (
     <div className="page-container" data-testid="instructors-page">
       <div className="page-header">
-        <h1>Nos moniteurs</h1>
-        <p>Découvrez nos moniteurs certifiés et trouvez celui qui correspond à vos besoins</p>
+        <div>
+          <h1>Nos moniteurs</h1>
+          <p>Découvrez nos moniteurs certifiés et trouvez celui qui correspond à vos besoins</p>
+        </div>
+        <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="filter-toggle" data-testid="toggle-filters">
+          <Filter size={18} /> Filtres
+        </Button>
       </div>
+
+      {showFilters && (
+        <Card className="filters-card" data-testid="filters-panel">
+          <CardContent>
+            <div className="filters-grid">
+              <div className="filter-group">
+                <Label>Station</Label>
+                <Select value={filters.station_id} onValueChange={(v) => setFilters({ ...filters, station_id: v })}>
+                  <SelectTrigger data-testid="filter-station">
+                    <SelectValue placeholder="Toutes les stations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Toutes les stations</SelectItem>
+                    {stations.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="filter-group">
+                <Label>Spécialité</Label>
+                <Select value={filters.specialty} onValueChange={(v) => setFilters({ ...filters, specialty: v })}>
+                  <SelectTrigger data-testid="filter-specialty">
+                    <SelectValue placeholder="Toutes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Toutes</SelectItem>
+                    {specialties.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="filter-group">
+                <Label>Niveau</Label>
+                <Select value={filters.level} onValueChange={(v) => setFilters({ ...filters, level: v })}>
+                  <SelectTrigger data-testid="filter-level">
+                    <SelectValue placeholder="Tous niveaux" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous niveaux</SelectItem>
+                    {levels.map((l) => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="filter-group">
+                <Label>Prix max: {filters.maxPrice}€/h</Label>
+                <Slider
+                  value={[filters.maxPrice]}
+                  onValueChange={([v]) => setFilters({ ...filters, maxPrice: v })}
+                  min={20}
+                  max={200}
+                  step={10}
+                  data-testid="filter-price"
+                />
+              </div>
+            </div>
+            <Button variant="ghost" onClick={clearFilters} className="clear-filters">Effacer les filtres</Button>
+          </CardContent>
+        </Card>
+      )}
 
       {instructors.length === 0 ? (
         <Card className="empty-state">
           <CardContent>
             <Users size={48} />
-            <p>Aucun moniteur disponible pour le moment</p>
+            <p>Aucun moniteur disponible avec ces critères</p>
+            <Button variant="outline" onClick={clearFilters}>Effacer les filtres</Button>
           </CardContent>
         </Card>
       ) : (
@@ -283,6 +391,12 @@ const InstructorsList = () => {
                 </div>
               </CardHeader>
               <CardContent>
+                {instructor.station && (
+                  <div className="instructor-station">
+                    <MapPin size={14} />
+                    <span>{instructor.station.name}</span>
+                  </div>
+                )}
                 <p className="instructor-bio">{instructor.bio || "Moniteur de ski expérimenté"}</p>
                 <div className="instructor-tags">
                   {instructor.specialties?.map((s) => (
@@ -366,6 +480,12 @@ const InstructorDetail = ({ user }) => {
             <div>
               <CardTitle className="large">{instructor.user?.name}</CardTitle>
               <CardDescription className="large">{instructor.hourly_rate}€/h</CardDescription>
+              {instructor.station && (
+                <div className="instructor-station">
+                  <MapPin size={14} />
+                  <span>{instructor.station.name}</span>
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -399,7 +519,10 @@ const InstructorDetail = ({ user }) => {
                 <Card key={lesson.id} className="lesson-card" data-testid={`lesson-${lesson.id}`}>
                   <CardContent>
                     <div className="lesson-info">
-                      <h4>{lesson.title}</h4>
+                      <h4>
+                        {lesson.title}
+                        {lesson.is_recurring && <Repeat size={14} className="recurring-icon" />}
+                      </h4>
                       <div className="lesson-meta">
                         <span><Clock size={14} /> {lesson.start_time} - {lesson.end_time}</span>
                         <span><Users size={14} /> {lesson.current_participants}/{lesson.max_participants}</span>
@@ -423,22 +546,32 @@ const InstructorDetail = ({ user }) => {
   );
 };
 
-// Add useParams import
-import { useParams } from "react-router-dom";
-
-// Lessons List
+// Lessons List with Filters
 const LessonsList = ({ user }) => {
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [lessonType, setLessonType] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    lesson_type: "",
+    station_id: "",
+    level: "",
+    maxPrice: 200
+  });
+  const stations = useStations();
   const navigate = useNavigate();
+
+  const levels = ["Débutant", "Intermédiaire", "Avancé", "Expert"];
 
   useEffect(() => {
     const fetchLessons = async () => {
       try {
         const params = {};
-        if (lessonType !== "all") params.lesson_type = lessonType;
+        if (filters.lesson_type) params.lesson_type = filters.lesson_type;
+        if (filters.station_id) params.station_id = filters.station_id;
+        if (filters.level) params.level = filters.level;
+        if (filters.maxPrice < 200) params.max_price = filters.maxPrice;
+        
         const response = await axios.get(`${API}/lessons`, { params });
         setLessons(response.data);
       } catch (e) {
@@ -448,7 +581,7 @@ const LessonsList = ({ user }) => {
       }
     };
     fetchLessons();
-  }, [lessonType]);
+  }, [filters]);
 
   const handleBook = async (lesson) => {
     if (!user) {
@@ -466,6 +599,10 @@ const LessonsList = ({ user }) => {
     }
   };
 
+  const clearFilters = () => {
+    setFilters({ lesson_type: "", station_id: "", level: "", maxPrice: 200 });
+  };
+
   if (loading) return <div className="loading-page"><div className="loading-spinner"></div></div>;
 
   const filteredLessons = lessons.filter(l => l.date === format(selectedDate, "yyyy-MM-dd"));
@@ -473,22 +610,75 @@ const LessonsList = ({ user }) => {
   return (
     <div className="page-container" data-testid="lessons-page">
       <div className="page-header">
-        <h1>Cours disponibles</h1>
-        <p>Parcourez tous les cours et réservez celui qui vous convient</p>
+        <div>
+          <h1>Cours disponibles</h1>
+          <p>Parcourez tous les cours et réservez celui qui vous convient</p>
+        </div>
+        <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="filter-toggle">
+          <Filter size={18} /> Filtres
+        </Button>
       </div>
 
-      <div className="lessons-filters">
-        <Select value={lessonType} onValueChange={setLessonType}>
-          <SelectTrigger className="filter-select" data-testid="lesson-type-filter">
-            <SelectValue placeholder="Type de cours" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les cours</SelectItem>
-            <SelectItem value="private">Cours particuliers</SelectItem>
-            <SelectItem value="group">Cours collectifs</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {showFilters && (
+        <Card className="filters-card">
+          <CardContent>
+            <div className="filters-grid">
+              <div className="filter-group">
+                <Label>Type de cours</Label>
+                <Select value={filters.lesson_type} onValueChange={(v) => setFilters({ ...filters, lesson_type: v })}>
+                  <SelectTrigger data-testid="filter-lesson-type">
+                    <SelectValue placeholder="Tous les cours" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous les cours</SelectItem>
+                    <SelectItem value="private">Particuliers</SelectItem>
+                    <SelectItem value="group">Collectifs</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="filter-group">
+                <Label>Station</Label>
+                <Select value={filters.station_id} onValueChange={(v) => setFilters({ ...filters, station_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Toutes les stations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Toutes les stations</SelectItem>
+                    {stations.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="filter-group">
+                <Label>Niveau</Label>
+                <Select value={filters.level} onValueChange={(v) => setFilters({ ...filters, level: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous niveaux" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous niveaux</SelectItem>
+                    {levels.map((l) => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="filter-group">
+                <Label>Prix max: {filters.maxPrice}€</Label>
+                <Slider
+                  value={[filters.maxPrice]}
+                  onValueChange={([v]) => setFilters({ ...filters, maxPrice: v })}
+                  min={20}
+                  max={200}
+                  step={10}
+                />
+              </div>
+            </div>
+            <Button variant="ghost" onClick={clearFilters} className="clear-filters">Effacer les filtres</Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="lessons-layout">
         <div className="calendar-wrapper">
@@ -518,10 +708,20 @@ const LessonsList = ({ user }) => {
                       <AvatarImage src={lesson.instructor?.user?.picture} />
                       <AvatarFallback>{lesson.instructor?.user?.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <span>{lesson.instructor?.user?.name}</span>
+                    <div>
+                      <span>{lesson.instructor?.user?.name}</span>
+                      {lesson.instructor?.station && (
+                        <span className="instructor-station-small">
+                          <MapPin size={12} /> {lesson.instructor.station.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="lesson-info">
-                    <h4>{lesson.title}</h4>
+                    <h4>
+                      {lesson.title}
+                      {lesson.is_recurring && <Repeat size={14} className="recurring-icon" />}
+                    </h4>
                     <div className="lesson-meta">
                       <span><Clock size={14} /> {lesson.start_time} - {lesson.end_time}</span>
                       <span><Users size={14} /> {lesson.current_participants}/{lesson.max_participants}</span>
@@ -638,6 +838,11 @@ const Dashboard = ({ user }) => {
                     <div>
                       <h4>{booking.lesson?.title}</h4>
                       <span className="instructor-name">{booking.lesson?.instructor?.user?.name}</span>
+                      {booking.lesson?.instructor?.station && (
+                        <span className="instructor-station-small">
+                          <MapPin size={12} /> {booking.lesson.instructor.station.name}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="booking-meta">
@@ -681,10 +886,12 @@ const BecomeInstructor = ({ user, setUser }) => {
     bio: "",
     specialties: [],
     ski_levels: [],
-    hourly_rate: 50
+    hourly_rate: 50,
+    station_id: ""
   });
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const stations = useStations();
 
   const specialtiesOptions = ["Ski alpin", "Snowboard", "Freestyle", "Ski de fond", "Hors-piste"];
   const levelsOptions = ["Débutant", "Intermédiaire", "Avancé", "Expert"];
@@ -738,6 +945,20 @@ const BecomeInstructor = ({ user, setUser }) => {
       <Card className="form-card">
         <CardContent>
           <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <Label htmlFor="station">Station de ski</Label>
+              <Select value={formData.station_id} onValueChange={(v) => setFormData({ ...formData, station_id: v })}>
+                <SelectTrigger data-testid="instructor-station">
+                  <SelectValue placeholder="Sélectionnez votre station" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stations.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name} ({s.region})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="form-group">
               <Label htmlFor="bio">Présentation</Label>
               <Textarea
@@ -807,7 +1028,7 @@ const BecomeInstructor = ({ user, setUser }) => {
   );
 };
 
-// Instructor Dashboard
+// Instructor Dashboard with Recurring Lessons
 const InstructorDashboard = ({ user }) => {
   const [lessons, setLessons] = useState([]);
   const [instructor, setInstructor] = useState(null);
@@ -821,7 +1042,10 @@ const InstructorDashboard = ({ user }) => {
     start_time: "09:00",
     end_time: "10:00",
     max_participants: 1,
-    price: 50
+    price: 50,
+    is_recurring: false,
+    recurrence_type: "weekly",
+    recurrence_end_date: format(addWeeks(new Date(), 4), "yyyy-MM-dd")
   });
   const navigate = useNavigate();
 
@@ -852,7 +1076,11 @@ const InstructorDashboard = ({ user }) => {
     e.preventDefault();
     try {
       const response = await axios.post(`${API}/lessons`, newLesson, { withCredentials: true });
-      setLessons([...lessons, response.data]);
+      
+      // Refresh lessons list
+      const lessonsRes = await axios.get(`${API}/my-lessons`, { withCredentials: true });
+      setLessons(lessonsRes.data);
+      
       setShowCreateLesson(false);
       setNewLesson({
         lesson_type: "private",
@@ -862,9 +1090,14 @@ const InstructorDashboard = ({ user }) => {
         start_time: "09:00",
         end_time: "10:00",
         max_participants: 1,
-        price: 50
+        price: 50,
+        is_recurring: false,
+        recurrence_type: "weekly",
+        recurrence_end_date: format(addWeeks(new Date(), 4), "yyyy-MM-dd")
       });
-      toast.success("Cours créé !");
+      
+      const count = response.data.lessons_created || 1;
+      toast.success(`${count} cours créé(s) !`);
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erreur lors de la création");
     }
@@ -962,6 +1195,41 @@ const InstructorDashboard = ({ user }) => {
                     <Label>Prix (€)</Label>
                     <Input type="number" value={newLesson.price} onChange={(e) => setNewLesson({ ...newLesson, price: parseFloat(e.target.value) })} min={10} data-testid="lesson-price" />
                   </div>
+                  
+                  {/* Recurring lesson options */}
+                  <div className="form-group recurring-section">
+                    <div className="checkbox-item">
+                      <Checkbox
+                        id="is_recurring"
+                        checked={newLesson.is_recurring}
+                        onCheckedChange={(checked) => setNewLesson({ ...newLesson, is_recurring: checked })}
+                        data-testid="lesson-recurring"
+                      />
+                      <Label htmlFor="is_recurring"><Repeat size={14} /> Cours récurrent</Label>
+                    </div>
+                    
+                    {newLesson.is_recurring && (
+                      <div className="recurring-options">
+                        <div className="form-group">
+                          <Label>Fréquence</Label>
+                          <Select value={newLesson.recurrence_type} onValueChange={(v) => setNewLesson({ ...newLesson, recurrence_type: v })}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="weekly">Hebdomadaire</SelectItem>
+                              <SelectItem value="biweekly">Toutes les 2 semaines</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="form-group">
+                          <Label>Jusqu'au</Label>
+                          <Input type="date" value={newLesson.recurrence_end_date} onChange={(e) => setNewLesson({ ...newLesson, recurrence_end_date: e.target.value })} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
                   <DialogFooter>
                     <Button type="submit" data-testid="submit-lesson">Créer</Button>
                   </DialogFooter>
@@ -983,7 +1251,10 @@ const InstructorDashboard = ({ user }) => {
                 <Card key={lesson.id} className={`lesson-card instructor ${lesson.status}`} data-testid={`my-lesson-${lesson.id}`}>
                   <CardContent>
                     <div className="lesson-info">
-                      <h4>{lesson.title}</h4>
+                      <h4>
+                        {lesson.title}
+                        {lesson.is_recurring && <Repeat size={14} className="recurring-icon" />}
+                      </h4>
                       <div className="lesson-meta">
                         <span><CalendarIcon size={14} /> {lesson.date}</span>
                         <span><Clock size={14} /> {lesson.start_time} - {lesson.end_time}</span>
@@ -1032,7 +1303,7 @@ const InstructorDashboard = ({ user }) => {
   );
 };
 
-// Admin Dashboard
+// Admin Dashboard with Commission Stats
 const AdminDashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
   const [pendingInstructors, setPendingInstructors] = useState([]);
@@ -1084,6 +1355,15 @@ const AdminDashboard = ({ user }) => {
     }
   };
 
+  const handleSendReminders = async () => {
+    try {
+      const response = await axios.post(`${API}/admin/send-reminders`, {}, { withCredentials: true });
+      toast.success(response.data.message);
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi des rappels");
+    }
+  };
+
   if (loading) return <div className="loading-page"><div className="loading-spinner"></div></div>;
 
   return (
@@ -1124,8 +1404,30 @@ const AdminDashboard = ({ user }) => {
         </Card>
       </div>
 
+      {/* Revenue Stats */}
+      <div className="revenue-section">
+        <h2><TrendingUp size={20} /> Revenus</h2>
+        <div className="revenue-grid">
+          <Card className="revenue-card">
+            <CardContent>
+              <div className="revenue-label">Chiffre d'affaires total</div>
+              <div className="revenue-value">{stats?.total_revenue || 0}€</div>
+            </CardContent>
+          </Card>
+          <Card className="revenue-card commission">
+            <CardContent>
+              <div className="revenue-label">Commission plateforme ({stats?.commission_rate})</div>
+              <div className="revenue-value">{stats?.total_commission || 0}€</div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       <div className="section-header">
         <h2>Demandes en attente ({stats?.pending_instructors || 0})</h2>
+        <Button variant="outline" onClick={handleSendReminders} data-testid="send-reminders-btn">
+          Envoyer les rappels 24h
+        </Button>
       </div>
 
       {pendingInstructors.length === 0 ? (
@@ -1148,6 +1450,9 @@ const AdminDashboard = ({ user }) => {
                   <div>
                     <h4>{instructor.user?.name}</h4>
                     <p>{instructor.user?.email}</p>
+                    {instructor.station && (
+                      <p className="station"><MapPin size={14} /> {instructor.station.name}</p>
+                    )}
                     <p className="bio">{instructor.bio}</p>
                     <div className="instructor-tags">
                       {instructor.specialties?.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}
