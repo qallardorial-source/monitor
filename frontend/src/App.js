@@ -553,9 +553,9 @@ const LessonsList = ({ user }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    lesson_type: "",
-    station_id: "",
-    level: "",
+    lesson_type: "all",
+    station_id: "all",
+    level: "all",
     maxPrice: 200
   });
   const stations = useStations();
