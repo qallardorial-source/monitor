@@ -633,6 +633,15 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.4rem;
 }
 
+.section-header button {
+  background: var(--primary);
+  color: white;
+}
+
+.section-header button:hover {
+  background: var(--primary-dark);
+}
+
 .instructor-lessons-list {
   display: flex;
   flex-direction: column;
