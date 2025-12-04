@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mountain, Calendar as CalendarIcon, Clock, Users, Euro, MapPin, User, LogOut, Menu, ChevronRight, Snowflake, Ski, Star, Check, X } from "lucide-react";
+import { Mountain, Calendar as CalendarIcon, Clock, Users, Euro, MapPin, User, LogOut, Menu, ChevronRight, Snowflake, Star, Check, X, Award } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
