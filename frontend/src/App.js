@@ -269,9 +269,9 @@ const InstructorsList = () => {
     const fetchInstructors = async () => {
       try {
         const params = {};
-        if (filters.station_id) params.station_id = filters.station_id;
-        if (filters.specialty) params.specialty = filters.specialty;
-        if (filters.level) params.level = filters.level;
+        if (filters.station_id && filters.station_id !== "all") params.station_id = filters.station_id;
+        if (filters.specialty && filters.specialty !== "all") params.specialty = filters.specialty;
+        if (filters.level && filters.level !== "all") params.level = filters.level;
         if (filters.maxPrice < 200) params.max_price = filters.maxPrice;
         
         const response = await axios.get(`${API}/instructors`, { params });
@@ -286,7 +286,7 @@ const InstructorsList = () => {
   }, [filters]);
 
   const clearFilters = () => {
-    setFilters({ station_id: "", specialty: "", level: "", maxPrice: 200 });
+    setFilters({ station_id: "all", specialty: "all", level: "all", maxPrice: 200 });
   };
 
   if (loading) return <div className="loading-page"><div className="loading-spinner"></div></div>;
