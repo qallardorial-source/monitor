@@ -255,9 +255,9 @@ const InstructorsList = () => {
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    station_id: "",
-    specialty: "",
-    level: "",
+    station_id: "all",
+    specialty: "all",
+    level: "all",
     maxPrice: 200
   });
   const stations = useStations();
