@@ -600,7 +600,7 @@ const LessonsList = ({ user }) => {
   };
 
   const clearFilters = () => {
-    setFilters({ lesson_type: "", station_id: "", level: "", maxPrice: 200 });
+    setFilters({ lesson_type: "all", station_id: "all", level: "all", maxPrice: 200 });
   };
 
   if (loading) return <div className="loading-page"><div className="loading-spinner"></div></div>;
