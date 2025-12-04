@@ -91,7 +91,7 @@ const Header = ({ user, logout }) => {
                 </DropdownMenuItem>
                 {user.role === "instructor" && (
                   <DropdownMenuItem onClick={() => navigate("/instructor-dashboard")} data-testid="menu-instructor">
-                    <Ski className="menu-icon" /> Espace moniteur
+                    <Award className="menu-icon" /> Espace moniteur
                   </DropdownMenuItem>
                 )}
                 {user.role === "admin" && (
