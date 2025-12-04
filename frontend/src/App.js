@@ -314,7 +314,7 @@ const InstructorsList = () => {
                     <SelectValue placeholder="Toutes les stations" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes les stations</SelectItem>
+                    <SelectItem value="all">Toutes les stations</SelectItem>
                     {stations.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
@@ -328,7 +328,7 @@ const InstructorsList = () => {
                     <SelectValue placeholder="Toutes" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes</SelectItem>
+                    <SelectItem value="all">Toutes</SelectItem>
                     {specialties.map((s) => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
@@ -342,7 +342,7 @@ const InstructorsList = () => {
                     <SelectValue placeholder="Tous niveaux" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous niveaux</SelectItem>
+                    <SelectItem value="all">Tous niveaux</SelectItem>
                     {levels.map((l) => (
                       <SelectItem key={l} value={l}>{l}</SelectItem>
                     ))}
