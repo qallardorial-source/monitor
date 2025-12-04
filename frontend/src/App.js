@@ -172,7 +172,7 @@ const Landing = ({ user }) => {
           </Card>
           <Card className="feature-card">
             <CardHeader>
-              <div className="feature-icon"><Ski size={24} /></div>
+              <div className="feature-icon"><Award size={24} /></div>
               <CardTitle>Cours variés</CardTitle>
             </CardHeader>
             <CardContent>
