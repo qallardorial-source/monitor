@@ -907,6 +907,14 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.9rem;
 }
 
+.pending-info .station {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  margin: 8px 0;
+}
+
 .pending-info .bio {
   margin: 12px 0;
 }
