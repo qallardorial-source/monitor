@@ -101,3 +101,99 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Test the complete SkiMonitor application including newly added features: Homepage & Footer, Instructors List & Filters, Lessons Page, Enhanced Instructor Dashboard with weather/stats/export, and Responsive Design"
+
+frontend:
+  - task: "Homepage & Footer Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Testing homepage load, footer sections, and legal page navigation"
+
+  - task: "Instructors List & Filters"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Testing instructors page, filter toggle, station/specialty/price filters"
+
+  - task: "Lessons Page & Calendar"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Testing lessons page, calendar date selector, and lesson filters"
+
+  - task: "Enhanced Instructor Dashboard"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Testing new dashboard features: weather card, stats cards, revenue chart, export CSV, lesson management"
+
+  - task: "Legal Pages"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Legal.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Testing Mentions légales, CGU, and Politique de confidentialité pages"
+
+  - task: "Responsive Design"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Testing mobile viewport (375x667) and responsive navigation"
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+
+test_plan:
+  current_focus:
+    - "Homepage & Footer Testing"
+    - "Instructors List & Filters"
+    - "Lessons Page & Calendar"
+    - "Enhanced Instructor Dashboard"
+    - "Legal Pages"
+    - "Responsive Design"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+      message: "Starting comprehensive testing of SkiMonitor application. Will test all major features including new enhanced instructor dashboard with weather, stats, and export functionality. Using frontend URL from .env: https://alpinematch.preview.emergentagent.com"
