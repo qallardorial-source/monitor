@@ -41,5 +41,5 @@ await page.context.add_cookies([{
     "secure": true,
     "sameSite": "None"
 }]);
-await page.goto("https://ski-appointments.preview.emergentagent.com");
+await page.goto("https://alpinematch.preview.emergentagent.com");
 ```

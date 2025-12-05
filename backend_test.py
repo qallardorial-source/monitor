@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import time
 
 class SkiMonitorAPITester:
-    def __init__(self, base_url="https://ski-appointments.preview.emergentagent.com"):
+    def __init__(self, base_url="https://alpinematch.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.admin_token = "admin_session_1764880591104"
@@ -273,7 +273,7 @@ class SkiMonitorAPITester:
             
         payment_data = {
             "booking_id": self.test_booking_id,
-            "origin_url": "https://ski-appointments.preview.emergentagent.com"
+            "origin_url": "https://alpinematch.preview.emergentagent.com"
         }
         
         success, data, status = self.make_request('POST', 'payments/checkout', payment_data, self.test_user_token, 200)

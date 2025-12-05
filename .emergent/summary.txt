@@ -1,0 +1,165 @@
+<analysis>**original_problem_statement:** The user wants to create a web application similar to Doctolib but for ski instructors. The application should include a booking system.
+
+**PRODUCT REQUIREMENTS:**
+- A platform for booking ski lessons (private and group).
+- User authentication via Google.
+- Optional online payment integration with Stripe.
+- A system for administrators to validate and approve instructor accounts.
+- The platform's theme should be ice blue.
+- GDPR compliance is important; there should be no public reviews or ratings of instructors.
+- **High-priority features requested:**
+    - Email notifications (simulated in the console for now).
+    - Search and filtering for lessons/instructors (by resort, skill level, price).
+    - Geolocation: Association of instructors with specific ski resorts.
+    - Recurring lessons feature for instructors.
+    - A 10% commission fee on bookings for the platform.
+    - An enhanced instructor dashboard with statistics and a CSV export feature for accounting.
+    - Weather information for resorts (API key to be added later).
+    - Legal pages (Terms of Service, Privacy Policy, etc.) with placeholder content for now.
+    - The list of ski resorts should be comprehensive, covering all of France.
+
+**User's preferred language**: French
+
+**what currently exists?**
+A full-stack application has been built with a FastAPI backend, React frontend, and MongoDB database.
+
+The application supports:
+- **Three user roles:** regular user, instructor, and administrator.
+- **Authentication:** Google login.
+- **Core booking flow:** Users can browse instructors and lessons, book them, and receive a Stripe payment link.
+- **Instructor flow:** Users can apply to become instructors. Once approved by an admin, they can create and manage their lessons (including recurring ones).
+- **Admin flow:** An admin dashboard exists for viewing platform statistics (users, lessons, revenue, commission) and for approving/rejecting pending instructor applications. The admin user is .
+- **Features:** A search and filter system for instructors and lessons is in place. A 10% platform commission is calculated on payments. The list of French ski resorts has been significantly expanded.
+
+**Last working item**:
+The agent was implementing a large feature set requested by the user, which includes an enhanced instructor dashboard, CSV export, weather integration, and legal pages.
+
+- Last item agent was working: The agent was in the process of replacing the existing  component in  with a new, more advanced version. This new version is designed to include statistics (revenue, bookings) and a button to export data to CSV. The backend code in  has already been updated with the necessary endpoints for these features.
+- Status: IN PROGRESS
+- Agent Testing Done: N
+- Which testing method agent to use? both
+- User Testing Done: N
+
+**All Pending/In progress Issue list**:
+  - Issue 1: (P0) The current implementation of the enhanced instructor dashboard and related features is incomplete and untested.
+
+  Issues Detail:
+  - Issue 1: 
+     - Attempted fixes: The agent has modified  to add new endpoints and has created a new  file. It was in the middle of a multi-step  operation on  to insert the new dashboard UI code.
+     - Next debug checklist: 
+       1. Verify that the replacement of the  component in  is complete and syntactically correct.
+       2. Add routing and links for the new  page, likely in the application's footer.
+       3. Implement the weather display component. The backend endpoint  exists, but the frontend part is missing.
+       4. Restart the backend server to apply changes to .
+       5. Thoroughly test the new features end-to-end:
+          - Log in as an instructor and check the new dashboard for stats.
+          - Test the Export CSV functionality.
+          - Verify that the weather widget appears (even if it shows no data without an API key).
+          - Check that the legal page links are present in the footer and navigate correctly.
+     - Why fix this issue and what will be achieved with the fix? This will complete the user's latest feature request, providing instructors with valuable tools for managing their business and ensuring the application has the necessary legal pages.
+     - Status:  IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on other issue: None
+
+**In progress Task List**:
+  - Task 1: Complete the implementation of user-requested features (enhanced dashboard, export, weather, legal).
+ 
+ Task Detail:
+  - Task 1: 
+     - Where to resume: The agent was performing a  on  to update the  component. The next step is to finalize these frontend changes, add the legal page routes, and then proceed with testing.
+     - What will be achieved with this? This will deliver the final set of features requested by the user in the last interaction.
+     - Status:  IN PROGRESS
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on something: No
+
+**Upcoming and Future Tasks**
+Upcoming Tasks:
+- (P0) Implement placeholder content for the legal pages (). The user specified leaving the text empty for now, but a structure should be in place.
+- (P1) Integrate a real weather API. The user needs to provide an OpenWeatherMap API key, which will be added to the  file.
+Future Tasks:
+- Integrated messaging system for clients and instructors.
+- Partial payments/deposits at the time of booking.
+- Automated refunds via Stripe based on cancellation policies.
+- Push notifications for new bookings and reminders.
+- PWA (Progressive Web App) support for mobile installation.
+- Verification of instructor diplomas (e.g., ESF/ENSA).
+- A visual calendar on the instructor dashboard.
+
+**Completed work in this session**
+- List of all completed tasks with file and method name:
+  - **Core Application MVP**: Built the initial full-stack application (, ).
+  - **Admin Panel & Instructor Approval**: Implemented admin dashboard for stats and instructor validation (, ).
+  - **Stripe Integration**: Added optional payment processing.
+  - **Search & Filtering**: Implemented filters for instructors and lessons by station, level, and price (, ).
+  - **Recurring Lessons**: Added functionality for instructors to create weekly recurring lessons.
+  - **Platform Commission**: Integrated a 10% commission calculation on payments.
+  - **Expanded Ski Resorts**: Updated the resort list in  to include 192 French stations.
+- Recently completed:
+  - **Backend for New Features**: Updated  with endpoints for the enhanced instructor dashboard (), CSV export (), and weather ().
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver)
+- **Frontend:** React.js (functional components with Hooks), shadcn/ui components
+- **Database:** MongoDB
+- **Deployment:** Docker container, services managed by 
+
+**key DB schema**
+  - **users**: 
+  - **instructors**: 
+  - **lessons**: 
+  - **bookings**: 
+  - **payment_transactions**: 
+
+**All files of reference**
+- : The single source of truth for all backend logic, including API endpoints, database interactions, and business rules. It was heavily modified to add the new features.
+- : The single main component for the entire React frontend. It manages state, routing (declaratively), and renders all views. It is currently being modified.
+- : Contains all the custom CSS for the application.
+- : A new file created to hold the content for legal notices, CGU/CGV, etc.
+
+**key api endpoints**
+- : Handles Google login.
+- : GET (list/filter), POST (register).
+- : POST to approve an instructor.
+- : GET (list/filter), POST (create).
+- : POST to book a lesson.
+- : POST to create a Stripe payment session.
+- : GET admin dashboard statistics.
+- : GET admin revenue and commission stats.
+- : GET stats for the instructor's personal dashboard.
+- : GET to download a CSV of bookings.
+- : GET weather data for an instructor's station.
+- : GET list of all ski resorts.
+
+**Last 10 User Messages and any pending user messages**
+1.  **Peux tu mettre l’ensemble des stations françaises ?** - (Can you put all the French stations?) - **COMPLETED**
+2.  **Qu’est-ce que tu rajouterai ? Niveau légal c’est bon ?** - (What would you add? Is the legal level good?) - **COMPLETED**, agent provided suggestions and highlighted missing legal pages.
+3.  **Tableau de bord moniteur, export pour expert comptable météo et le legal** - (Instructor dashboard, export for accountant, weather and legal) - **IN PROGRESS**
+4.  User was asked for weather API key preference.
+5.  **API gratuite laisse vide pour l’instant les info légales** - (Free API, leave the legal info empty for now) - **COMPLETED**, agent acknowledged.
+6.  Agent began implementing the requested features.
+7.  User was asked for the API key for OpenWeatherMap. (This message seems to be a duplicate/rephrasing of a previous one)
+8.  **API gratuite laisse vide pour l’instant les info légales** (Same response as 5) - **COMPLETED**
+9.  The user hasn't sent any new messages. The agent is currently working on the implementation.
+
+**Project Health Check:**
+- Broken: The frontend is likely in a broken state due to the mid-flight replacement of the  component in .
+- Mocked: Email notifications are mocked by printing to the console. The weather API is mocked to return empty data until a key is provided.
+
+**3rd Party Integrations**
+- Google OAuth - uses Emergent-provided credentials for social login.
+- Stripe (Payments) - uses a test key from the system environment for creating checkout sessions.
+- OpenWeatherMap (Weather) - Intended for use, but currently not configured (requires User API Key).
+
+**Testing status**
+- Testing agent used after significant changes: NO (not since the last major feature implementation began)
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: []
+- Known regressions: None identified, but the application is in an unstable state due to ongoing development.
+
+**What agent forgot to execute**
+- The agent has not yet added the routing for the new  page or the footer links to it within .
+- The frontend component to display the weather information fetched from  has not been created or added to the UI.</analysis>
