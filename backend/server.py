@@ -1,9 +1,12 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import io
+import csv
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
@@ -22,6 +25,9 @@ db = client[os.environ['DB_NAME']]
 # Stripe setup
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 stripe_api_key = os.environ.get('STRIPE_API_KEY', 'sk_test_emergent')
+
+# Weather API
+OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY', '')
 
 # Platform settings
 PLATFORM_COMMISSION = 0.10  # 10% commission
