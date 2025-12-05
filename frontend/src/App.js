@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Mountain, Calendar as CalendarIcon, Clock, Users, Euro, MapPin, User, LogOut, ChevronRight, Snowflake, Star, Check, X, Award, Filter, Repeat, TrendingUp, Download, Cloud, Wind, Thermometer, Eye, FileText } from "lucide-react";
+import { Mountain, Calendar as CalendarIcon, Clock, Users, Euro, MapPin, User, LogOut, ChevronRight, Snowflake, Star, Check, X, Award, Filter, Repeat, TrendingUp, Download, Cloud, Wind, Thermometer, Eye, FileText, Mail, Phone } from "lucide-react";
 import { format, addWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MentionsLegales, CGU, PolitiqueConfidentialite } from "@/pages/Legal";
