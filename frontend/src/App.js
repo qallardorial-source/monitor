@@ -135,6 +135,61 @@ const Header = ({ user, logout }) => {
   );
 };
 
+// Footer Component
+const Footer = () => {
+  return (
+    <footer className="footer" data-testid="footer">
+      <div className="footer-container">
+        <div className="footer-section">
+          <div className="footer-brand">
+            <Mountain size={24} />
+            <span>SkiMonitor</span>
+          </div>
+          <p className="footer-tagline">La plateforme de réservation de cours de ski</p>
+        </div>
+        
+        <div className="footer-section">
+          <h4>Liens utiles</h4>
+          <div className="footer-links">
+            <Link to="/instructors">Nos moniteurs</Link>
+            <Link to="/lessons">Cours disponibles</Link>
+            <Link to="/become-instructor">Devenir moniteur</Link>
+          </div>
+        </div>
+        
+        <div className="footer-section">
+          <h4>Informations légales</h4>
+          <div className="footer-links">
+            <Link to="/mentions-legales" data-testid="footer-mentions">Mentions légales</Link>
+            <Link to="/cgu" data-testid="footer-cgu">CGU</Link>
+            <Link to="/politique-confidentialite" data-testid="footer-privacy">Politique de confidentialité</Link>
+          </div>
+        </div>
+        
+        <div className="footer-section">
+          <h4>Contact</h4>
+          <div className="footer-contact">
+            <div className="footer-contact-item">
+              <Mail size={16} />
+              <span>contact@skimonitor.fr</span>
+            </div>
+            <div className="footer-contact-item">
+              <Phone size={16} />
+              <span>+33 1 23 45 67 89</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <Separator className="footer-separator" />
+      
+      <div className="footer-bottom">
+        <p>&copy; {new Date().getFullYear()} SkiMonitor. Tous droits réservés.</p>
+      </div>
+    </footer>
+  );
+};
+
 // Landing Page
 const Landing = ({ user }) => {
   const navigate = useNavigate();
