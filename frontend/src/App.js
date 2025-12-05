@@ -1030,11 +1030,14 @@ const BecomeInstructor = ({ user, setUser }) => {
   );
 };
 
-// Instructor Dashboard with Recurring Lessons
+// Instructor Dashboard with Stats, Weather, and Export
 const InstructorDashboard = ({ user }) => {
   const [lessons, setLessons] = useState([]);
   const [instructor, setInstructor] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [showCreateLesson, setShowCreateLesson] = useState(false);
   const [newLesson, setNewLesson] = useState({
     lesson_type: "private",
@@ -1059,12 +1062,24 @@ const InstructorDashboard = ({ user }) => {
 
     const fetchData = async () => {
       try {
-        const [meRes, lessonsRes] = await Promise.all([
+        const [meRes, lessonsRes, statsRes] = await Promise.all([
           axios.get(`${API}/auth/me`, { withCredentials: true }),
-          axios.get(`${API}/my-lessons`, { withCredentials: true })
+          axios.get(`${API}/my-lessons`, { withCredentials: true }),
+          axios.get(`${API}/instructor/stats`, { withCredentials: true }).catch(() => ({ data: null }))
         ]);
         setInstructor(meRes.data.instructor);
         setLessons(lessonsRes.data);
+        setStats(statsRes.data);
+        
+        // Fetch weather if instructor has a station
+        if (meRes.data.instructor?.station_id) {
+          try {
+            const weatherRes = await axios.get(`${API}/weather/${meRes.data.instructor.station_id}`);
+            setWeather(weatherRes.data);
+          } catch (e) {
+            console.error("Weather fetch error:", e);
+          }
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -1115,13 +1130,39 @@ const InstructorDashboard = ({ user }) => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const response = await axios.get(`${API}/instructor/export`, {
+        withCredentials: true,
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `export_skimonitor_${format(new Date(), 'yyyyMMdd')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Export téléchargé !");
+    } catch (e) {
+      toast.error("Erreur lors de l'export");
+    }
+  };
+
   if (loading) return <div className="loading-page"><div className="loading-spinner"></div></div>;
 
   return (
     <div className="page-container" data-testid="instructor-dashboard-page">
       <div className="page-header">
-        <h1>Espace moniteur</h1>
-        <p>Gérez vos cours et réservations</p>
+        <div>
+          <h1>Espace moniteur</h1>
+          <p>Gérez vos cours et suivez vos revenus</p>
+        </div>
+        {instructor?.status === "approved" && (
+          <Button variant="outline" onClick={handleExport} data-testid="export-btn">
+            <Download size={16} /> Export comptable
+          </Button>
+        )}
       </div>
 
       {instructor?.status === "pending" && (
@@ -1142,8 +1183,136 @@ const InstructorDashboard = ({ user }) => {
 
       {instructor?.status === "approved" && (
         <>
+          {/* Weather Card */}
+          {weather && (
+            <Card className="weather-card" data-testid="weather-card">
+              <CardContent>
+                <div className="weather-content">
+                  <div className="weather-main">
+                    <Cloud size={32} />
+                    <div>
+                      <h3>{weather.station_name}</h3>
+                      <p className="weather-desc">{weather.description}</p>
+                    </div>
+                  </div>
+                  <div className="weather-details">
+                    <div className="weather-item">
+                      <Thermometer size={16} />
+                      <span>{weather.temperature}°C</span>
+                    </div>
+                    <div className="weather-item">
+                      <Wind size={16} />
+                      <span>{weather.wind_speed} km/h</span>
+                    </div>
+                    <div className="weather-item">
+                      <Eye size={16} />
+                      <span>{weather.visibility} km</span>
+                    </div>
+                    {weather.snow > 0 && (
+                      <div className="weather-item snow">
+                        <Snowflake size={16} />
+                        <span>{weather.snow} cm</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Stats Cards */}
+          {stats && (
+            <div className="instructor-stats-grid">
+              <Card className="stat-card">
+                <CardContent>
+                  <CalendarIcon size={24} />
+                  <div className="stat-value">{stats.total_lessons}</div>
+                  <div className="stat-label">Cours créés</div>
+                </CardContent>
+              </Card>
+              <Card className="stat-card">
+                <CardContent>
+                  <Users size={24} />
+                  <div className="stat-value">{stats.total_bookings}</div>
+                  <div className="stat-label">Réservations</div>
+                </CardContent>
+              </Card>
+              <Card className="stat-card">
+                <CardContent>
+                  <Check size={24} />
+                  <div className="stat-value">{stats.confirmed_bookings}</div>
+                  <div className="stat-label">Confirmées</div>
+                </CardContent>
+              </Card>
+              <Card className="stat-card revenue">
+                <CardContent>
+                  <Euro size={24} />
+                  <div className="stat-value">{stats.total_revenue}€</div>
+                  <div className="stat-label">Revenus nets</div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Monthly Revenue Chart (simple) */}
+          {stats?.monthly_revenue && Object.keys(stats.monthly_revenue).length > 0 && (
+            <Card className="monthly-revenue-card">
+              <CardHeader>
+                <CardTitle><TrendingUp size={18} /> Revenus mensuels</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="monthly-bars">
+                  {Object.entries(stats.monthly_revenue).slice(-6).map(([month, amount]) => (
+                    <div key={month} className="monthly-bar-item">
+                      <div className="monthly-bar" style={{ height: `${Math.min(100, (amount / Math.max(...Object.values(stats.monthly_revenue))) * 100)}%` }}>
+                        <span className="monthly-amount">{amount}€</span>
+                      </div>
+                      <span className="monthly-label">{month.slice(5)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Upcoming Lessons */}
+          {stats?.upcoming_lessons?.length > 0 && (
+            <div className="upcoming-section">
+              <h2>Prochains cours</h2>
+              <div className="upcoming-list">
+                {stats.upcoming_lessons.slice(0, 5).map((lesson) => (
+                  <Card key={lesson.id} className="upcoming-card">
+                    <CardContent>
+                      <div className="upcoming-info">
+                        <h4>{lesson.title}</h4>
+                        <div className="upcoming-meta">
+                          <span><CalendarIcon size={14} /> {lesson.date}</span>
+                          <span><Clock size={14} /> {lesson.start_time}</span>
+                          <span><Users size={14} /> {lesson.current_participants}/{lesson.max_participants}</span>
+                        </div>
+                      </div>
+                      {lesson.bookings?.length > 0 && (
+                        <div className="upcoming-clients">
+                          {lesson.bookings.map((b) => (
+                            <Avatar key={b.id} className="small">
+                              <AvatarImage src={b.user?.picture} />
+                              <AvatarFallback>{b.user?.name?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Separator className="my-8" />
+
+          {/* Lessons Management */}
           <div className="section-header">
-            <h2>Mes cours</h2>
+            <h2>Gestion des cours</h2>
             <Dialog open={showCreateLesson} onOpenChange={setShowCreateLesson}>
               <DialogTrigger asChild>
                 <Button data-testid="create-lesson-btn">Créer un cours</Button>
