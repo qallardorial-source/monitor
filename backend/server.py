@@ -136,18 +136,18 @@ class EmailService:
 
 email_service = EmailService()
 
-# ============== SKI STATIONS DATA ==============
+# ============== SKI STATIONS DATA (avec coordonnées GPS pour météo) ==============
 
 SKI_STATIONS = [
     # Savoie
-    {"id": "courchevel", "name": "Courchevel", "region": "Savoie", "altitude": 1850},
-    {"id": "meribel", "name": "Méribel", "region": "Savoie", "altitude": 1450},
-    {"id": "val-thorens", "name": "Val Thorens", "region": "Savoie", "altitude": 2300},
-    {"id": "les-menuires", "name": "Les Menuires", "region": "Savoie", "altitude": 1850},
-    {"id": "tignes", "name": "Tignes", "region": "Savoie", "altitude": 2100},
-    {"id": "val-disere", "name": "Val d'Isère", "region": "Savoie", "altitude": 1850},
-    {"id": "les-arcs", "name": "Les Arcs", "region": "Savoie", "altitude": 1600},
-    {"id": "la-plagne", "name": "La Plagne", "region": "Savoie", "altitude": 1970},
+    {"id": "courchevel", "name": "Courchevel", "region": "Savoie", "altitude": 1850, "lat": 45.4167, "lon": 6.6333},
+    {"id": "meribel", "name": "Méribel", "region": "Savoie", "altitude": 1450, "lat": 45.3967, "lon": 6.5656},
+    {"id": "val-thorens", "name": "Val Thorens", "region": "Savoie", "altitude": 2300, "lat": 45.2983, "lon": 6.5800},
+    {"id": "les-menuires", "name": "Les Menuires", "region": "Savoie", "altitude": 1850, "lat": 45.3236, "lon": 6.5328},
+    {"id": "tignes", "name": "Tignes", "region": "Savoie", "altitude": 2100, "lat": 45.4686, "lon": 6.9064},
+    {"id": "val-disere", "name": "Val d'Isère", "region": "Savoie", "altitude": 1850, "lat": 45.4478, "lon": 6.9797},
+    {"id": "les-arcs", "name": "Les Arcs", "region": "Savoie", "altitude": 1600, "lat": 45.5703, "lon": 6.8269},
+    {"id": "la-plagne", "name": "La Plagne", "region": "Savoie", "altitude": 1970, "lat": 45.5058, "lon": 6.6772},
     {"id": "la-rosiere", "name": "La Rosière", "region": "Savoie", "altitude": 1850},
     {"id": "sainte-foy", "name": "Sainte-Foy-Tarentaise", "region": "Savoie", "altitude": 1550},
     {"id": "valmorel", "name": "Valmorel", "region": "Savoie", "altitude": 1400},
