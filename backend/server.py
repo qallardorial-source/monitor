@@ -1338,6 +1338,379 @@ async def send_lesson_reminders(request: Request):
     
     return {"message": f"{reminders_sent} rappel(s) envoyé(s)"}
 
+# ============== INSTRUCTOR DASHBOARD STATS ==============
+
+@api_router.get("/instructor/stats")
+async def get_instructor_stats(request: Request):
+    """Get instructor dashboard statistics"""
+    user = await require_instructor(request)
+    instructor = await db.instructors.find_one({"user_id": user.id})
+    
+    if not instructor:
+        raise HTTPException(status_code=404, detail="Profil moniteur non trouvé")
+    
+    # Get all lessons
+    lessons = await db.lessons.find({"instructor_id": instructor["id"]}, {"_id": 0}).to_list(1000)
+    
+    # Get all bookings for instructor's lessons
+    lesson_ids = [l["id"] for l in lessons]
+    bookings = await db.bookings.find({"lesson_id": {"$in": lesson_ids}}, {"_id": 0}).to_list(1000)
+    
+    # Get transactions
+    booking_ids = [b["id"] for b in bookings]
+    transactions = await db.payment_transactions.find({
+        "booking_id": {"$in": booking_ids},
+        "status": "paid"
+    }, {"_id": 0}).to_list(1000)
+    
+    # Calculate stats
+    total_lessons = len(lessons)
+    available_lessons = len([l for l in lessons if l["status"] == "available"])
+    completed_lessons = len([l for l in lessons if l["date"] < datetime.now(timezone.utc).strftime("%Y-%m-%d")])
+    
+    total_bookings = len([b for b in bookings if b["status"] != "cancelled"])
+    confirmed_bookings = len([b for b in bookings if b["status"] == "confirmed"])
+    
+    total_revenue = sum(t.get("instructor_amount", 0) for t in transactions)
+    total_commission_paid = sum(t.get("commission", 0) for t in transactions)
+    
+    # Monthly revenue (last 6 months)
+    monthly_revenue = {}
+    for t in transactions:
+        created = t.get("created_at", "")
+        if isinstance(created, str) and len(created) >= 7:
+            month_key = created[:7]  # YYYY-MM
+            monthly_revenue[month_key] = monthly_revenue.get(month_key, 0) + t.get("instructor_amount", 0)
+    
+    # Upcoming lessons
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    upcoming_lessons = sorted(
+        [l for l in lessons if l["date"] >= today and l["status"] != "cancelled"],
+        key=lambda x: (x["date"], x["start_time"])
+    )[:10]
+    
+    # Add booking info to upcoming lessons
+    for lesson in upcoming_lessons:
+        lesson_bookings = [b for b in bookings if b["lesson_id"] == lesson["id"] and b["status"] != "cancelled"]
+        for booking in lesson_bookings:
+            client = await db.users.find_one({"id": booking["user_id"]}, {"_id": 0})
+            booking["user"] = client
+        lesson["bookings"] = lesson_bookings
+    
+    return {
+        "total_lessons": total_lessons,
+        "available_lessons": available_lessons,
+        "completed_lessons": completed_lessons,
+        "total_bookings": total_bookings,
+        "confirmed_bookings": confirmed_bookings,
+        "total_revenue": round(total_revenue, 2),
+        "total_commission_paid": round(total_commission_paid, 2),
+        "monthly_revenue": monthly_revenue,
+        "upcoming_lessons": upcoming_lessons
+    }
+
+@api_router.get("/instructor/export")
+async def export_instructor_data(request: Request, year: Optional[int] = None, month: Optional[int] = None):
+    """Export instructor transactions for accounting (CSV)"""
+    user = await require_instructor(request)
+    instructor = await db.instructors.find_one({"user_id": user.id})
+    
+    if not instructor:
+        raise HTTPException(status_code=404, detail="Profil moniteur non trouvé")
+    
+    # Get all lessons
+    lessons = await db.lessons.find({"instructor_id": instructor["id"]}, {"_id": 0}).to_list(1000)
+    lesson_ids = [l["id"] for l in lessons]
+    lessons_dict = {l["id"]: l for l in lessons}
+    
+    # Get bookings
+    bookings = await db.bookings.find({"lesson_id": {"$in": lesson_ids}}, {"_id": 0}).to_list(1000)
+    bookings_dict = {b["id"]: b for b in bookings}
+    
+    # Get transactions
+    query = {"booking_id": {"$in": [b["id"] for b in bookings]}, "status": "paid"}
+    transactions = await db.payment_transactions.find(query, {"_id": 0}).to_list(1000)
+    
+    # Filter by year/month if specified
+    if year:
+        transactions = [t for t in transactions if t.get("created_at", "").startswith(str(year))]
+    if month:
+        month_str = f"{year or datetime.now().year}-{month:02d}"
+        transactions = [t for t in transactions if t.get("created_at", "").startswith(month_str)]
+    
+    # Create CSV
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    # Header
+    writer.writerow([
+        "Date",
+        "N° Transaction",
+        "Client",
+        "Cours",
+        "Date du cours",
+        "Montant total (€)",
+        "Commission plateforme (€)",
+        "Montant net (€)",
+        "Statut"
+    ])
+    
+    # Data rows
+    for tx in sorted(transactions, key=lambda x: x.get("created_at", "")):
+        booking = bookings_dict.get(tx.get("booking_id", ""), {})
+        lesson = lessons_dict.get(booking.get("lesson_id", ""), {})
+        client = await db.users.find_one({"id": booking.get("user_id", "")}, {"_id": 0})
+        
+        writer.writerow([
+            tx.get("created_at", "")[:10] if tx.get("created_at") else "",
+            tx.get("id", "")[:8],
+            client.get("name", "Inconnu") if client else "Inconnu",
+            lesson.get("title", ""),
+            lesson.get("date", ""),
+            f"{tx.get('amount', 0):.2f}",
+            f"{tx.get('commission', 0):.2f}",
+            f"{tx.get('instructor_amount', 0):.2f}",
+            "Payé"
+        ])
+    
+    # Total row
+    total_amount = sum(t.get("amount", 0) for t in transactions)
+    total_commission = sum(t.get("commission", 0) for t in transactions)
+    total_net = sum(t.get("instructor_amount", 0) for t in transactions)
+    
+    writer.writerow([])
+    writer.writerow([
+        "TOTAL", "", "", "", "",
+        f"{total_amount:.2f}",
+        f"{total_commission:.2f}",
+        f"{total_net:.2f}",
+        ""
+    ])
+    
+    output.seek(0)
+    
+    filename = f"export_skimonitor_{user.name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.csv"
+    
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8-sig')),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+# ============== ADMIN EXPORT ==============
+
+@api_router.get("/admin/export")
+async def export_admin_data(request: Request, year: Optional[int] = None, month: Optional[int] = None):
+    """Admin: Export all transactions for accounting (CSV)"""
+    await require_admin(request)
+    
+    query = {"status": "paid"}
+    transactions = await db.payment_transactions.find(query, {"_id": 0}).to_list(10000)
+    
+    # Filter by year/month if specified
+    if year:
+        transactions = [t for t in transactions if t.get("created_at", "").startswith(str(year))]
+    if month:
+        month_str = f"{year or datetime.now().year}-{month:02d}"
+        transactions = [t for t in transactions if t.get("created_at", "").startswith(month_str)]
+    
+    # Create CSV
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    # Header
+    writer.writerow([
+        "Date",
+        "N° Transaction",
+        "Client",
+        "Email client",
+        "Moniteur",
+        "Cours",
+        "Date du cours",
+        "Montant total (€)",
+        "Commission plateforme (€)",
+        "Montant moniteur (€)",
+        "Statut"
+    ])
+    
+    # Data rows
+    for tx in sorted(transactions, key=lambda x: x.get("created_at", "")):
+        booking = await db.bookings.find_one({"id": tx.get("booking_id", "")}, {"_id": 0})
+        client = await db.users.find_one({"id": tx.get("user_id", "")}, {"_id": 0}) if tx.get("user_id") else None
+        lesson = await db.lessons.find_one({"id": booking.get("lesson_id", "")}, {"_id": 0}) if booking else None
+        instructor = await db.instructors.find_one({"id": lesson.get("instructor_id", "")}, {"_id": 0}) if lesson else None
+        instructor_user = await db.users.find_one({"id": instructor.get("user_id", "")}, {"_id": 0}) if instructor else None
+        
+        writer.writerow([
+            tx.get("created_at", "")[:10] if tx.get("created_at") else "",
+            tx.get("id", "")[:8],
+            client.get("name", "Inconnu") if client else "Inconnu",
+            client.get("email", "") if client else "",
+            instructor_user.get("name", "Inconnu") if instructor_user else "Inconnu",
+            lesson.get("title", "") if lesson else "",
+            lesson.get("date", "") if lesson else "",
+            f"{tx.get('amount', 0):.2f}",
+            f"{tx.get('commission', 0):.2f}",
+            f"{tx.get('instructor_amount', 0):.2f}",
+            "Payé"
+        ])
+    
+    # Total row
+    total_amount = sum(t.get("amount", 0) for t in transactions)
+    total_commission = sum(t.get("commission", 0) for t in transactions)
+    total_net = sum(t.get("instructor_amount", 0) for t in transactions)
+    
+    writer.writerow([])
+    writer.writerow([
+        "TOTAL", "", "", "", "", "", "",
+        f"{total_amount:.2f}",
+        f"{total_commission:.2f}",
+        f"{total_net:.2f}",
+        ""
+    ])
+    
+    output.seek(0)
+    
+    filename = f"export_skimonitor_admin_{datetime.now().strftime('%Y%m%d')}.csv"
+    
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8-sig')),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+# ============== WEATHER API ==============
+
+# Coordinates for major stations (fallback)
+STATION_COORDS = {
+    "chamonix": {"lat": 45.9237, "lon": 6.8694},
+    "courchevel": {"lat": 45.4167, "lon": 6.6333},
+    "meribel": {"lat": 45.3967, "lon": 6.5656},
+    "val-thorens": {"lat": 45.2983, "lon": 6.5800},
+    "tignes": {"lat": 45.4686, "lon": 6.9064},
+    "val-disere": {"lat": 45.4478, "lon": 6.9797},
+    "les-arcs": {"lat": 45.5703, "lon": 6.8269},
+    "la-plagne": {"lat": 45.5058, "lon": 6.6772},
+    "avoriaz": {"lat": 46.1919, "lon": 6.7747},
+    "morzine": {"lat": 46.1797, "lon": 6.7094},
+    "megeve": {"lat": 45.8567, "lon": 6.6175},
+    "les-2-alpes": {"lat": 45.0167, "lon": 6.1333},
+    "alpe-dhuez": {"lat": 45.0922, "lon": 6.0694},
+    "serre-chevalier": {"lat": 44.9333, "lon": 6.5667},
+    "la-clusaz": {"lat": 45.9047, "lon": 6.4239},
+    "les-gets": {"lat": 46.1586, "lon": 6.6697},
+    "flaine": {"lat": 46.0058, "lon": 6.6889},
+    "les-menuires": {"lat": 45.3236, "lon": 6.5328},
+    "saint-gervais": {"lat": 45.8919, "lon": 6.7128},
+    "les-contamines": {"lat": 45.8206, "lon": 6.7267},
+}
+
+@api_router.get("/weather/{station_id}")
+async def get_weather(station_id: str):
+    """Get weather for a ski station"""
+    # Find station
+    station = next((s for s in SKI_STATIONS if s["id"] == station_id), None)
+    if not station:
+        raise HTTPException(status_code=404, detail="Station non trouvée")
+    
+    # Get coordinates
+    coords = STATION_COORDS.get(station_id)
+    if not coords:
+        # Use station data if available
+        if station.get("lat") and station.get("lon"):
+            coords = {"lat": station["lat"], "lon": station["lon"]}
+        else:
+            # Return simulated weather if no coordinates
+            return get_simulated_weather(station)
+    
+    # Check if API key is configured
+    if not OPENWEATHER_API_KEY:
+        return get_simulated_weather(station)
+    
+    try:
+        async with httpx.AsyncClient() as http_client:
+            response = await http_client.get(
+                "https://api.openweathermap.org/data/2.5/weather",
+                params={
+                    "lat": coords["lat"],
+                    "lon": coords["lon"],
+                    "appid": OPENWEATHER_API_KEY,
+                    "units": "metric",
+                    "lang": "fr"
+                },
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "station_id": station_id,
+                    "station_name": station["name"],
+                    "temperature": round(data["main"]["temp"]),
+                    "feels_like": round(data["main"]["feels_like"]),
+                    "humidity": data["main"]["humidity"],
+                    "description": data["weather"][0]["description"].capitalize(),
+                    "icon": data["weather"][0]["icon"],
+                    "wind_speed": round(data["wind"]["speed"] * 3.6),  # m/s to km/h
+                    "visibility": data.get("visibility", 10000) // 1000,  # meters to km
+                    "snow": data.get("snow", {}).get("1h", 0),
+                    "clouds": data["clouds"]["all"],
+                    "source": "openweathermap"
+                }
+            else:
+                return get_simulated_weather(station)
+    except Exception as e:
+        logger.error(f"Weather API error: {e}")
+        return get_simulated_weather(station)
+
+def get_simulated_weather(station: dict):
+    """Generate realistic simulated weather for ski station"""
+    import random
+    
+    # Base temperature varies with altitude
+    altitude = station.get("altitude", 1500)
+    base_temp = -5 - (altitude - 1000) * 0.006  # -6°C per 1000m
+    
+    # Add some randomness
+    temp = round(base_temp + random.uniform(-5, 5))
+    
+    # Weather conditions weighted for winter ski resort
+    conditions = [
+        {"description": "Ciel dégagé", "icon": "01d", "weight": 20},
+        {"description": "Peu nuageux", "icon": "02d", "weight": 15},
+        {"description": "Nuageux", "icon": "03d", "weight": 20},
+        {"description": "Couvert", "icon": "04d", "weight": 15},
+        {"description": "Neige légère", "icon": "13d", "weight": 15},
+        {"description": "Neige", "icon": "13d", "weight": 10},
+        {"description": "Brouillard", "icon": "50d", "weight": 5},
+    ]
+    
+    # Weighted random selection
+    total_weight = sum(c["weight"] for c in conditions)
+    r = random.uniform(0, total_weight)
+    cumulative = 0
+    selected = conditions[0]
+    for c in conditions:
+        cumulative += c["weight"]
+        if r <= cumulative:
+            selected = c
+            break
+    
+    return {
+        "station_id": station["id"],
+        "station_name": station["name"],
+        "temperature": temp,
+        "feels_like": temp - random.randint(2, 5),
+        "humidity": random.randint(50, 90),
+        "description": selected["description"],
+        "icon": selected["icon"],
+        "wind_speed": random.randint(5, 40),
+        "visibility": random.randint(5, 20),
+        "snow": random.choice([0, 0, 0, 2, 5, 10, 15]) if "Neige" in selected["description"] else 0,
+        "clouds": random.randint(0, 100),
+        "source": "simulated"
+    }
+
 # ============== UTILITY ROUTES ==============
 
 @api_router.get("/")
