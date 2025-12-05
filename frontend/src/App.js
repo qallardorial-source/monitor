@@ -16,9 +16,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
-import { Mountain, Calendar as CalendarIcon, Clock, Users, Euro, MapPin, User, LogOut, ChevronRight, Snowflake, Star, Check, X, Award, Filter, Repeat, TrendingUp } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Mountain, Calendar as CalendarIcon, Clock, Users, Euro, MapPin, User, LogOut, ChevronRight, Snowflake, Star, Check, X, Award, Filter, Repeat, TrendingUp, Download, Cloud, Wind, Thermometer, Eye, FileText } from "lucide-react";
 import { format, addWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
+import { MentionsLegales, CGU, PolitiqueConfidentialite } from "@/pages/Legal";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
