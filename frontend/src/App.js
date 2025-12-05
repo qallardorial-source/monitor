@@ -1821,8 +1821,12 @@ function App() {
             <Route path="/instructor-dashboard" element={<InstructorDashboard user={user} />} />
             <Route path="/admin" element={<AdminDashboard user={user} />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/mentions-legales" element={<MentionsLegales />} />
+            <Route path="/cgu" element={<CGU />} />
+            <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
           </Routes>
         </main>
+        <Footer />
       </BrowserRouter>
     </div>
   );
