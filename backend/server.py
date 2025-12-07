@@ -1810,11 +1810,30 @@ async def get_instructor_rating(instructor_id: str):
 # ============== UTILITY ROUTES ==============
 
 @api_router.post("/auth/promote-to-admin")
-async def promote_to_admin(request: Request):
-    """Promote current user to admin role (temporary endpoint for setup)"""
+async def promote_to_admin(request: Request, secret: str = None):
+    """Promote current user to admin role (secured with secret key)
+
+    Usage: POST /auth/promote-to-admin?secret=YOUR_ADMIN_SECRET
+    Set ADMIN_SECRET env var to enable this endpoint.
+    """
     user = await get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Non authentifié")
+
+    # Check if admin secret is configured and matches
+    admin_secret = os.environ.get('ADMIN_SECRET')
+
+    if admin_secret and secret != admin_secret:
+        raise HTTPException(status_code=403, detail="Secret incorrect")
+
+    # If no admin_secret is set, only allow if no admin exists yet
+    if not admin_secret:
+        existing_admin = await db.users.find_one({"role": "admin"})
+        if existing_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Un administrateur existe déjà. Configurez ADMIN_SECRET pour créer d'autres admins."
+            )
 
     # Update user role to admin
     await db.users.update_one(

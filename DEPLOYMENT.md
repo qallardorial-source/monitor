@@ -69,6 +69,9 @@ yarn start
 
 ## Après déploiement
 
+### Devenir administrateur
+
+**Premier admin** (aucun secret requis) :
 1. Visitez https://qallardorial-source.github.io/monitor/
 2. Connectez-vous
 3. Ouvrez la console (F12) et exécutez :
@@ -79,3 +82,13 @@ yarn start
    }).then(r => r.json()).then(console.log)
    ```
 4. Rafraîchissez - vous êtes admin !
+
+**Admins suivants** (nécessite ADMIN_SECRET) :
+1. Configurez la variable `ADMIN_SECRET` sur votre backend
+2. Utilisez :
+   ```javascript
+   fetch('/api/auth/promote-to-admin?secret=VOTRE_SECRET', {
+     method: 'POST',
+     credentials: 'include'
+   }).then(r => r.json()).then(console.log)
+   ```
