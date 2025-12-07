@@ -1809,6 +1809,27 @@ async def get_instructor_rating(instructor_id: str):
 
 # ============== UTILITY ROUTES ==============
 
+@api_router.post("/auth/promote-to-admin")
+async def promote_to_admin(request: Request):
+    """Promote current user to admin role (temporary endpoint for setup)"""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Non authentifié")
+
+    # Update user role to admin
+    await db.users.update_one(
+        {"id": user.id},
+        {"$set": {"role": "admin"}}
+    )
+
+    logger.info(f"User {user.email} promoted to admin")
+
+    return {
+        "message": "Vous êtes maintenant administrateur",
+        "email": user.email,
+        "role": "admin"
+    }
+
 @api_router.get("/")
 async def root():
     return {"message": "SkiMonitor API", "commission_rate": f"{int(PLATFORM_COMMISSION * 100)}%"}
