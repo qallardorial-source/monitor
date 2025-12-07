@@ -435,6 +435,15 @@ class PaymentTransaction(BaseModel):
     metadata: Optional[Dict] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class Review(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    instructor_id: str
+    user_id: str
+    booking_id: Optional[str] = None
+    rating: int  # 1-5 stars
+    comment: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # ============== REQUEST/RESPONSE MODELS ==============
 
 class SessionRequest(BaseModel):
@@ -470,6 +479,12 @@ class BookingCreate(BaseModel):
 class PaymentRequest(BaseModel):
     booking_id: str
     origin_url: str
+
+class ReviewCreate(BaseModel):
+    instructor_id: str
+    rating: int  # 1-5
+    comment: str = ""
+    booking_id: Optional[str] = None
 
 # ============== AUTH HELPERS ==============
 
@@ -1709,6 +1724,87 @@ def get_simulated_weather(station: dict):
         "snow": random.choice([0, 0, 0, 2, 5, 10, 15]) if "Neige" in selected["description"] else 0,
         "clouds": random.randint(0, 100),
         "source": "simulated"
+    }
+
+# ============== REVIEWS ==============
+
+@api_router.post("/reviews")
+async def create_review(review_data: ReviewCreate, request: Request):
+    """Create a review for an instructor"""
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Non authentifié")
+
+    # Validate rating
+    if review_data.rating < 1 or review_data.rating > 5:
+        raise HTTPException(status_code=400, detail="La note doit être entre 1 et 5")
+
+    # Check if instructor exists
+    instructor = await db.instructors.find_one({"id": review_data.instructor_id})
+    if not instructor:
+        raise HTTPException(status_code=404, detail="Moniteur non trouvé")
+
+    # Check if user already reviewed this instructor
+    existing_review = await db.reviews.find_one({
+        "user_id": user["id"],
+        "instructor_id": review_data.instructor_id
+    })
+    if existing_review:
+        raise HTTPException(status_code=400, detail="Vous avez déjà laissé un avis pour ce moniteur")
+
+    # Create review
+    review = Review(
+        instructor_id=review_data.instructor_id,
+        user_id=user["id"],
+        rating=review_data.rating,
+        comment=review_data.comment,
+        booking_id=review_data.booking_id
+    )
+
+    await db.reviews.insert_one(review.model_dump())
+    return review
+
+@api_router.get("/reviews")
+async def get_reviews(instructor_id: str = Query(..., description="ID du moniteur")):
+    """Get all reviews for an instructor"""
+    reviews = []
+    cursor = db.reviews.find({"instructor_id": instructor_id}).sort("created_at", -1)
+
+    async for review in cursor:
+        # Get user info
+        user = await db.users.find_one({"id": review["user_id"]})
+        review_with_user = {
+            **review,
+            "user_name": user["name"] if user else "Utilisateur",
+            "user_picture": user.get("picture") if user else None
+        }
+        reviews.append(review_with_user)
+
+    return reviews
+
+@api_router.get("/instructors/{instructor_id}/rating")
+async def get_instructor_rating(instructor_id: str):
+    """Get instructor average rating and review count"""
+    reviews = []
+    cursor = db.reviews.find({"instructor_id": instructor_id})
+
+    async for review in cursor:
+        reviews.append(review)
+
+    if not reviews:
+        return {
+            "instructor_id": instructor_id,
+            "average_rating": 0,
+            "review_count": 0
+        }
+
+    total_rating = sum(r["rating"] for r in reviews)
+    average = total_rating / len(reviews)
+
+    return {
+        "instructor_id": instructor_id,
+        "average_rating": round(average, 1),
+        "review_count": len(reviews)
     }
 
 # ============== UTILITY ROUTES ==============
