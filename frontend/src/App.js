@@ -317,6 +317,7 @@ const InstructorsList = () => {
     level: "all",
     maxPrice: 200
   });
+  const [ratings, setRatings] = useState({});
   const stations = useStations();
 
   const specialties = ["Ski alpin", "Snowboard", "Freestyle", "Ski de fond", "Hors-piste"];
@@ -330,9 +331,23 @@ const InstructorsList = () => {
         if (filters.specialty && filters.specialty !== "all") params.specialty = filters.specialty;
         if (filters.level && filters.level !== "all") params.level = filters.level;
         if (filters.maxPrice < 200) params.max_price = filters.maxPrice;
-        
+
         const response = await axios.get(`${API}/instructors`, { params });
         setInstructors(response.data);
+
+        // Fetch ratings for all instructors
+        const ratingsData = {};
+        await Promise.all(
+          response.data.map(async (instructor) => {
+            try {
+              const ratingRes = await axios.get(`${API}/instructors/${instructor.id}/rating`);
+              ratingsData[instructor.id] = ratingRes.data;
+            } catch (e) {
+              ratingsData[instructor.id] = { average_rating: 0, review_count: 0 };
+            }
+          })
+        );
+        setRatings(ratingsData);
       } catch (e) {
         toast.error("Erreur de chargement");
       } finally {
@@ -444,6 +459,12 @@ const InstructorsList = () => {
                   <div>
                     <CardTitle>{instructor.user?.name}</CardTitle>
                     <CardDescription>{instructor.hourly_rate}€/h</CardDescription>
+                    {ratings[instructor.id] && ratings[instructor.id].review_count > 0 && (
+                      <div className="instructor-rating-small">
+                        <StarRating rating={ratings[instructor.id].average_rating} readonly size={14} />
+                        <span className="rating-count">({ratings[instructor.id].review_count})</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardHeader>

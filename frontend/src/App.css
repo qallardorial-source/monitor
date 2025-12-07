@@ -1639,3 +1639,16 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+
+/* Instructor Rating Small (on cards) */
+.instructor-rating-small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.rating-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
