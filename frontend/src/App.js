@@ -686,6 +686,7 @@ const InstructorDetail = ({ user }) => {
   const [instructor, setInstructor] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bookingInProgress, setBookingInProgress] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const navigate = useNavigate();
 
@@ -699,7 +700,7 @@ const InstructorDetail = ({ user }) => {
         setInstructor(instRes.data);
         setLessons(lessonsRes.data);
       } catch (e) {
-        toast.error("Erreur de chargement");
+        toast.error("Impossible de charger les informations du moniteur");
       } finally {
         setLoading(false);
       }
@@ -714,12 +715,15 @@ const InstructorDetail = ({ user }) => {
       return;
     }
 
+    setBookingInProgress(lesson.id);
     try {
       await axios.post(`${API}/bookings`, { lesson_id: lesson.id, participants: 1 }, { withCredentials: true });
-      toast.success("Réservation effectuée !");
-      navigate("/dashboard");
+      toast.success("Réservation effectuée ! Redirection vers votre espace...");
+      setTimeout(() => navigate("/dashboard"), 1000);
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Erreur de réservation");
+      toast.error(e.response?.data?.detail || "Impossible de réserver ce cours. Veuillez réessayer.");
+    } finally {
+      setBookingInProgress(null);
     }
   };
 
@@ -792,8 +796,12 @@ const InstructorDetail = ({ user }) => {
                         {lesson.lesson_type === "private" ? "Particulier" : "Collectif"}
                       </Badge>
                     </div>
-                    <Button onClick={() => handleBook(lesson)} disabled={lesson.status === "full"} data-testid={`book-lesson-${lesson.id}`}>
-                      {lesson.status === "full" ? "Complet" : "Réserver"}
+                    <Button
+                      onClick={() => handleBook(lesson)}
+                      disabled={lesson.status === "full" || bookingInProgress === lesson.id}
+                      data-testid={`book-lesson-${lesson.id}`}
+                    >
+                      {bookingInProgress === lesson.id ? "Réservation..." : lesson.status === "full" ? "Complet" : "Réserver"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -1031,12 +1039,16 @@ const Dashboard = ({ user }) => {
   }, [user, navigate]);
 
   const handleCancel = async (bookingId) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir annuler cette réservation ?")) {
+      return;
+    }
+
     try {
       await axios.delete(`${API}/bookings/${bookingId}`, { withCredentials: true });
       setBookings(bookings.filter(b => b.id !== bookingId));
-      toast.success("Réservation annulée");
+      toast.success("Réservation annulée avec succès");
     } catch (e) {
-      toast.error("Erreur lors de l'annulation");
+      toast.error(e.response?.data?.detail || "Impossible d'annuler la réservation");
     }
   };
 
@@ -1351,13 +1363,44 @@ const InstructorDashboard = ({ user }) => {
 
   const handleCreateLesson = async (e) => {
     e.preventDefault();
+
+    // Validations côté client
+    if (!newLesson.title.trim()) {
+      toast.error("Le titre du cours est requis");
+      return;
+    }
+
+    if (newLesson.price <= 0) {
+      toast.error("Le prix doit être supérieur à 0€");
+      return;
+    }
+
+    if (newLesson.max_participants < 1) {
+      toast.error("Le nombre de participants doit être au moins 1");
+      return;
+    }
+
+    const lessonDate = new Date(newLesson.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (lessonDate < today) {
+      toast.error("La date du cours ne peut pas être dans le passé");
+      return;
+    }
+
+    if (newLesson.start_time >= newLesson.end_time) {
+      toast.error("L'heure de fin doit être après l'heure de début");
+      return;
+    }
+
     try {
       const response = await axios.post(`${API}/lessons`, newLesson, { withCredentials: true });
-      
+
       // Refresh lessons list
       const lessonsRes = await axios.get(`${API}/my-lessons`, { withCredentials: true });
       setLessons(lessonsRes.data);
-      
+
       setShowCreateLesson(false);
       setNewLesson({
         lesson_type: "private",
@@ -1372,21 +1415,25 @@ const InstructorDashboard = ({ user }) => {
         recurrence_type: "weekly",
         recurrence_end_date: format(addWeeks(new Date(), 4), "yyyy-MM-dd")
       });
-      
+
       const count = response.data.lessons_created || 1;
-      toast.success(`${count} cours créé(s) !`);
+      toast.success(`${count} cours créé(s) avec succès !`);
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Erreur lors de la création");
+      toast.error(e.response?.data?.detail || "Impossible de créer le cours. Vérifiez les informations.");
     }
   };
 
   const handleDeleteLesson = async (lessonId) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir annuler ce cours ? Les élèves inscrits seront notifiés.")) {
+      return;
+    }
+
     try {
       await axios.delete(`${API}/lessons/${lessonId}`, { withCredentials: true });
       setLessons(lessons.map(l => l.id === lessonId ? { ...l, status: "cancelled" } : l));
-      toast.success("Cours annulé");
+      toast.success("Cours annulé avec succès");
     } catch (e) {
-      toast.error("Erreur lors de l'annulation");
+      toast.error(e.response?.data?.detail || "Impossible d'annuler le cours");
     }
   };
 
