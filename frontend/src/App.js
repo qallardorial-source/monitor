@@ -195,6 +195,16 @@ const Landing = ({ user }) => {
   const navigate = useNavigate();
   const redirectUrl = encodeURIComponent(`${window.location.origin}/auth-callback`);
   const loginUrl = `${AUTH_URL}/?redirect=${redirectUrl}`;
+  const stations = useStations();
+  const [selectedStation, setSelectedStation] = useState("");
+
+  const handleSearch = () => {
+    if (selectedStation && selectedStation !== "all") {
+      navigate(`/instructors?station=${selectedStation}`);
+    } else {
+      navigate("/instructors");
+    }
+  };
 
   return (
     <div className="landing" data-testid="landing-page">
@@ -204,18 +214,59 @@ const Landing = ({ user }) => {
             <Snowflake size={14} />
             <span>Plateforme de réservation</span>
           </div>
-          <h1>Réservez votre cours de ski en quelques clics</h1>
-          <p>Trouvez le moniteur idéal et réservez vos cours de ski ou snowboard directement en ligne</p>
-          <div className="hero-actions">
-            <Button onClick={() => navigate("/instructors")} size="lg" className="primary-btn" data-testid="cta-instructors">
-              Voir les moniteurs <ChevronRight size={18} />
-            </Button>
-            {!user && (
-              <Button onClick={() => window.location.href = loginUrl} variant="outline" size="lg" className="secondary-btn" data-testid="cta-register">
-                Devenir moniteur
-              </Button>
-            )}
+          <h1>Trouvez votre moniteur de ski</h1>
+          <p>Réservez vos cours avec des moniteurs certifiés dans toute la France</p>
+
+          {/* Search bar */}
+          <Card className="search-card">
+            <CardContent className="search-content">
+              <div className="search-wrapper">
+                <div className="search-input-wrapper">
+                  <MapPin className="search-icon" size={20} />
+                  <Select value={selectedStation} onValueChange={setSelectedStation}>
+                    <SelectTrigger className="station-select">
+                      <SelectValue placeholder="Choisissez votre station de ski" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes les stations</SelectItem>
+                      {stations.map((station) => (
+                        <SelectItem key={station.id} value={station.id}>
+                          {station.name} ({station.region})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleSearch} size="lg" className="search-btn">
+                  Rechercher <ChevronRight size={18} />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="hero-stats">
+            <div className="stat">
+              <Users size={20} />
+              <span>Moniteurs certifiés</span>
+            </div>
+            <div className="stat">
+              <MapPin size={20} />
+              <span>{stations.length}+ stations</span>
+            </div>
+            <div className="stat">
+              <Star size={20} />
+              <span>Avis vérifiés</span>
+            </div>
           </div>
+
+          {!user && (
+            <div className="instructor-cta">
+              <span>Vous êtes moniteur ?</span>
+              <Button onClick={() => window.location.href = loginUrl} variant="link" className="link-btn">
+                Rejoignez-nous <ChevronRight size={16} />
+              </Button>
+            </div>
+          )}
         </div>
         <div className="hero-visual">
           <div className="hero-card">
@@ -308,11 +359,15 @@ const AuthCallback = ({ setUser, checkAuth }) => {
 
 // Instructors List with Filters
 const InstructorsList = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const stationParam = searchParams.get('station');
+
   const [instructors, setInstructors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    station_id: "all",
+    station_id: stationParam || "all",
     specialty: "all",
     level: "all",
     maxPrice: 200
