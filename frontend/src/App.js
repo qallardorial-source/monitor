@@ -477,6 +477,188 @@ const InstructorsList = () => {
   );
 };
 
+// Star Rating Component
+const StarRating = ({ rating, onRatingChange, readonly = false, size = 20 }) => {
+  const [hover, setHover] = useState(null);
+
+  return (
+    <div className="star-rating">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          size={size}
+          className={star <= (hover || rating) ? "star-filled" : "star-empty"}
+          onClick={() => !readonly && onRatingChange && onRatingChange(star)}
+          onMouseEnter={() => !readonly && setHover(star)}
+          onMouseLeave={() => !readonly && setHover(null)}
+          style={{ cursor: readonly ? 'default' : 'pointer' }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// Reviews Section Component
+const ReviewsSection = ({ instructorId, user }) => {
+  const [reviews, setReviews] = useState([]);
+  const [rating, setRating] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [newReview, setNewReview] = useState({ rating: 0, comment: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchReviews();
+    fetchRating();
+  }, [instructorId]);
+
+  const fetchReviews = async () => {
+    try {
+      const response = await axios.get(`${API}/reviews`, { params: { instructor_id: instructorId } });
+      setReviews(response.data);
+    } catch (e) {
+      console.error("Erreur chargement avis", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRating = async () => {
+    try {
+      const response = await axios.get(`${API}/instructors/${instructorId}/rating`);
+      setRating(response.data);
+    } catch (e) {
+      console.error("Erreur chargement note", e);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (newReview.rating === 0) {
+      toast.error("Veuillez sélectionner une note");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await axios.post(
+        `${API}/reviews`,
+        {
+          instructor_id: instructorId,
+          rating: newReview.rating,
+          comment: newReview.comment
+        },
+        { withCredentials: true }
+      );
+      toast.success("Avis ajouté avec succès");
+      setNewReview({ rating: 0, comment: "" });
+      setShowReviewForm(false);
+      fetchReviews();
+      fetchRating();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'ajout de l'avis");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="reviews-section">
+      <div className="reviews-header">
+        <h2>Avis des élèves</h2>
+        {rating && rating.review_count > 0 && (
+          <div className="rating-summary">
+            <StarRating rating={rating.average_rating} readonly size={24} />
+            <span className="rating-text">
+              {rating.average_rating}/5 ({rating.review_count} avis)
+            </span>
+          </div>
+        )}
+      </div>
+
+      {user && (
+        <div className="review-form-container">
+          {!showReviewForm ? (
+            <Button onClick={() => setShowReviewForm(true)} variant="outline">
+              Laisser un avis
+            </Button>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Votre avis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="form-group">
+                  <Label>Note</Label>
+                  <StarRating
+                    rating={newReview.rating}
+                    onRatingChange={(r) => setNewReview({ ...newReview, rating: r })}
+                    size={32}
+                  />
+                </div>
+                <div className="form-group">
+                  <Label htmlFor="comment">Commentaire (optionnel)</Label>
+                  <Textarea
+                    id="comment"
+                    value={newReview.comment}
+                    onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                    placeholder="Partagez votre expérience..."
+                    rows={4}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter className="review-form-actions">
+                <Button variant="outline" onClick={() => setShowReviewForm(false)}>
+                  Annuler
+                </Button>
+                <Button onClick={handleSubmitReview} disabled={submitting}>
+                  {submitting ? "Envoi..." : "Publier"}
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="loading-spinner"></div>
+      ) : reviews.length === 0 ? (
+        <Card>
+          <CardContent className="no-reviews">
+            <p>Aucun avis pour le moment. Soyez le premier à laisser un avis !</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="reviews-list">
+          {reviews.map((review) => (
+            <Card key={review.id} className="review-card">
+              <CardHeader>
+                <div className="review-header">
+                  <Avatar>
+                    <AvatarImage src={review.user_picture} />
+                    <AvatarFallback>{review.user_name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h4>{review.user_name}</h4>
+                    <StarRating rating={review.rating} readonly size={16} />
+                  </div>
+                  <span className="review-date">
+                    {format(new Date(review.created_at), "d MMM yyyy", { locale: fr })}
+                  </span>
+                </div>
+              </CardHeader>
+              {review.comment && (
+                <CardContent>
+                  <p>{review.comment}</p>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Instructor Detail
 const InstructorDetail = ({ user }) => {
   const { id } = useParams();
@@ -599,6 +781,8 @@ const InstructorDetail = ({ user }) => {
           </div>
         </div>
       </div>
+
+      <ReviewsSection instructorId={id} user={user} />
     </div>
   );
 };

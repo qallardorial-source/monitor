@@ -1,24 +1,45 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#000000" />
-        <meta name="description" content="A product of emergent.sh" />
-        <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-        <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+        <meta name="theme-color" content="#0EA5E9" />
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-        <title>Emergent | Fullstack App</title>
+        <!-- SEO Meta Tags -->
+        <meta name="description" content="SkiMonitor - Réservez vos cours de ski et snowboard en ligne avec des moniteurs certifiés dans toutes les stations de ski françaises. Réservation simple et paiement sécurisé." />
+        <meta name="keywords" content="cours de ski, moniteur ski, réservation ski, snowboard, stations de ski, ESF, cours particuliers ski" />
+        <meta name="author" content="SkiMonitor" />
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="SkiMonitor - Réservez vos cours de ski en ligne" />
+        <meta property="og:description" content="Trouvez le moniteur idéal et réservez vos cours de ski ou snowboard directement en ligne dans toutes les stations françaises." />
+        <meta property="og:site_name" content="SkiMonitor" />
+
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="SkiMonitor - Réservez vos cours de ski en ligne" />
+        <meta name="twitter:description" content="Trouvez le moniteur idéal et réservez vos cours de ski ou snowboard directement en ligne." />
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
+
+        <title>SkiMonitor - Réservez vos cours de ski en ligne</title>
+
+        <!-- GitHub Pages SPA redirect script -->
+        <script type="text/javascript">
+          (function(l) {
+            if (l.search[1] === '/' ) {
+              var decoded = l.search.slice(1).split('&').map(function(s) {
+                return s.replace(/~and~/g, '&')
+              }).join('?');
+              window.history.replaceState(null, null,
+                  l.pathname.slice(0, -1) + decoded + l.hash
+              );
+            }
+          }(window.location))
+        </script>
+
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
     </head>
     <body>
