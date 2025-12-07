@@ -270,6 +270,116 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.95rem;
 }
 
+/* Search Card */
+.search-card {
+  max-width: 800px;
+  margin: 0 auto 48px auto;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+}
+
+.search-content {
+  padding: 32px;
+}
+
+.search-wrapper {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  min-width: 300px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-icon {
+  color: var(--primary);
+}
+
+.station-select {
+  width: 100%;
+  height: 52px;
+  font-size: 1rem;
+}
+
+.search-btn {
+  height: 52px;
+  padding: 0 32px;
+  font-size: 1rem;
+  border-radius: 50px;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-btn:hover {
+  background: var(--primary-dark);
+}
+
+/* Hero Stats */
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  max-width: 800px;
+  margin: 0 auto 64px auto;
+  padding: 0 24px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* Instructor CTA */
+.instructor-cta {
+  text-align: center;
+  padding: 0 24px;
+  margin-bottom: 48px;
+}
+
+.instructor-cta p {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+
+.instructor-cta a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: gap 0.2s ease;
+}
+
+.instructor-cta a:hover {
+  gap: 10px;
+}
+
 /* Page Container */
 .page-container {
   max-width: 1280px;
