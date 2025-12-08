@@ -1353,6 +1353,185 @@ async def send_lesson_reminders(request: Request):
     
     return {"message": f"{reminders_sent} rappel(s) envoyé(s)"}
 
+@api_router.post("/admin/seed-instructors")
+async def seed_instructors(request: Request):
+    """Admin: Seed database with fictional instructors for demo purposes"""
+    await require_admin(request)
+
+    from random import choice, randint
+
+    # Fictional instructors data
+    FICTIONAL_INSTRUCTORS = [
+        {
+            "name": "Pierre Dumont",
+            "email": "pierre.dumont@skimonitor-demo.fr",
+            "bio": "Moniteur diplômé d'État avec 12 ans d'expérience. Passionné par la transmission de ma passion du ski alpin, j'adapte mes cours à tous les niveaux avec patience et pédagogie.",
+            "specialties": ["Ski alpin", "Hors-piste"],
+            "ski_levels": ["Débutant", "Intermédiaire", "Avancé"],
+            "hourly_rate": 65.0,
+            "station": "courchevel"
+        },
+        {
+            "name": "Sophie Martin",
+            "email": "sophie.martin@skimonitor-demo.fr",
+            "bio": "Ancienne membre de l'équipe de France de ski freestyle, je propose des cours de ski et snowboard avec une approche ludique et technique. Spécialiste des figures et du freestyle.",
+            "specialties": ["Snowboard", "Freestyle", "Ski alpin"],
+            "ski_levels": ["Intermédiaire", "Avancé", "Expert"],
+            "hourly_rate": 75.0,
+            "station": "val-thorens"
+        },
+        {
+            "name": "Marc Bertrand",
+            "email": "marc.bertrand@skimonitor-demo.fr",
+            "bio": "Moniteur ESF depuis 8 ans, je me spécialise dans l'enseignement aux enfants et débutants. Patience et bonne humeur garanties pour progresser en toute confiance !",
+            "specialties": ["Ski alpin", "Ski de fond"],
+            "ski_levels": ["Débutant", "Intermédiaire"],
+            "hourly_rate": 55.0,
+            "station": "meribel"
+        },
+        {
+            "name": "Julie Rousseau",
+            "email": "julie.rousseau@skimonitor-demo.fr",
+            "bio": "Guide de haute montagne et monitrice de ski, j'organise des sorties hors-piste exceptionnelles et des cours techniques pour skieurs confirmés. Sécurité et plaisir avant tout !",
+            "specialties": ["Hors-piste", "Ski alpin"],
+            "ski_levels": ["Avancé", "Expert"],
+            "hourly_rate": 85.0,
+            "station": "chamonix"
+        },
+        {
+            "name": "Thomas Leroy",
+            "email": "thomas.leroy@skimonitor-demo.fr",
+            "bio": "Moniteur polyvalent avec 15 ans d'expérience dans différentes stations alpines. J'enseigne le ski et le snowboard à tous les niveaux avec une approche personnalisée.",
+            "specialties": ["Ski alpin", "Snowboard"],
+            "ski_levels": ["Débutant", "Intermédiaire", "Avancé", "Expert"],
+            "hourly_rate": 70.0,
+            "station": "tignes"
+        },
+        {
+            "name": "Emma Dubois",
+            "email": "emma.dubois@skimonitor-demo.fr",
+            "bio": "Spécialiste du ski de fond et des cours pour enfants. Mon objectif : faire découvrir les joies du ski nordique dans un cadre naturel exceptionnel avec patience et enthousiasme.",
+            "specialties": ["Ski de fond", "Ski alpin"],
+            "ski_levels": ["Débutant", "Intermédiaire"],
+            "hourly_rate": 50.0,
+            "station": "les-saisies"
+        },
+        {
+            "name": "Lucas Moreau",
+            "email": "lucas.moreau@skimonitor-demo.fr",
+            "bio": "Champion régional de snowboard, je partage ma passion pour le freestyle et le freeride. Cours dynamiques et techniques pour progresser rapidement tout en s'amusant !",
+            "specialties": ["Snowboard", "Freestyle"],
+            "ski_levels": ["Intermédiaire", "Avancé", "Expert"],
+            "hourly_rate": 72.0,
+            "station": "avoriaz"
+        },
+        {
+            "name": "Chloé Bernard",
+            "email": "chloe.bernard@skimonitor-demo.fr",
+            "bio": "Monitrice diplômée spécialisée dans l'accompagnement des adultes débutants. Méthode douce et progressive pour vaincre vos appréhensions et prendre du plaisir sur les pistes.",
+            "specialties": ["Ski alpin"],
+            "ski_levels": ["Débutant", "Intermédiaire"],
+            "hourly_rate": 58.0,
+            "station": "megeve"
+        },
+        {
+            "name": "Antoine Petit",
+            "email": "antoine.petit@skimonitor-demo.fr",
+            "bio": "Moniteur passionné avec une double compétence ski alpin et hors-piste. J'accompagne les skieurs expérimentés à la découverte des plus beaux itinéraires de montagne.",
+            "specialties": ["Ski alpin", "Hors-piste"],
+            "ski_levels": ["Avancé", "Expert"],
+            "hourly_rate": 80.0,
+            "station": "val-disere"
+        },
+        {
+            "name": "Léa Fontaine",
+            "email": "lea.fontaine@skimonitor-demo.fr",
+            "bio": "Monitrice polyvalente et diplômée, j'enseigne le ski et le snowboard dans une ambiance conviviale. Spécialiste des cours collectifs et des groupes de tous âges.",
+            "specialties": ["Ski alpin", "Snowboard", "Freestyle"],
+            "ski_levels": ["Débutant", "Intermédiaire", "Avancé"],
+            "hourly_rate": 62.0,
+            "station": "les-arcs"
+        },
+    ]
+
+    AVATAR_URLS = [
+        f"https://api.dicebear.com/7.x/avataaars/svg?seed={name.split()[0]}"
+        for name in [i["name"] for i in FICTIONAL_INSTRUCTORS]
+    ]
+
+    LESSON_TITLES = {
+        "private": ["Cours particulier de ski", "Coaching personnalisé ski alpin", "Perfectionnement technique"],
+        "group": ["Stage collectif débutants", "Cours groupe niveau intermédiaire", "Session groupe perfectionnement"]
+    }
+
+    created_users = 0
+    created_instructors = 0
+    created_lessons = 0
+    skipped = 0
+
+    for idx, instructor_data in enumerate(FICTIONAL_INSTRUCTORS):
+        # Check if user already exists
+        existing_user = await db.users.find_one({"email": instructor_data["email"]})
+        if existing_user:
+            skipped += 1
+            continue
+
+        # Create user
+        user = User(
+            email=instructor_data["email"],
+            name=instructor_data["name"],
+            picture=AVATAR_URLS[idx],
+            role="instructor"
+        )
+        await db.users.insert_one(user.model_dump())
+        created_users += 1
+
+        # Create instructor profile (approved)
+        instructor = Instructor(
+            user_id=user.id,
+            bio=instructor_data["bio"],
+            specialties=instructor_data["specialties"],
+            ski_levels=instructor_data["ski_levels"],
+            hourly_rate=instructor_data["hourly_rate"],
+            station_id=instructor_data["station"],
+            status="approved"
+        )
+        await db.instructors.insert_one(instructor.model_dump())
+        created_instructors += 1
+
+        # Create sample lessons
+        num_lessons = randint(2, 4)
+        for i in range(num_lessons):
+            lesson_type = "private" if i % 2 == 0 else "group"
+            days_ahead = randint(1, 14)
+            lesson_date = (datetime.now(timezone.utc) + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+            start_hour = randint(9, 15)
+            end_hour = start_hour + randint(1, 2)
+
+            lesson = Lesson(
+                instructor_id=instructor.id,
+                lesson_type=lesson_type,
+                title=choice(LESSON_TITLES[lesson_type]),
+                description="Cours adapté à votre niveau pour une progression optimale.",
+                date=lesson_date,
+                start_time=f"{start_hour:02d}:00",
+                end_time=f"{end_hour:02d}:00",
+                max_participants=1 if lesson_type == "private" else randint(4, 8),
+                price=instructor_data["hourly_rate"] * (end_hour - start_hour),
+                status="available"
+            )
+            await db.lessons.insert_one(lesson.model_dump())
+            created_lessons += 1
+
+    return {
+        "success": True,
+        "message": "Seeding terminé avec succès !",
+        "created_users": created_users,
+        "created_instructors": created_instructors,
+        "created_lessons": created_lessons,
+        "skipped": skipped
+    }
+
 # ============== INSTRUCTOR DASHBOARD STATS ==============
 
 @api_router.get("/instructor/stats")
